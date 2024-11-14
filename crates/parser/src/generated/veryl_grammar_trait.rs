@@ -4764,7 +4764,7 @@ pub struct AllBit {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct AllBitTerm {
-    pub all_bit_term: crate::veryl_token::Token, /* (?:[0-9]+(?:_[0-9]+)*)?'[01xzXZ] */
+    pub all_bit_term: crate::veryl_token::Token, /* ([0-9]+(_[0-9]+)*)?'[01xzXZ] */
 }
 
 ///
@@ -4830,7 +4830,7 @@ pub struct AlwaysCombDeclaration {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct AlwaysCombTerm {
-    pub always_comb_term: crate::veryl_token::Token, /* (?-u:\b)always_comb(?-u:\b) */
+    pub always_comb_term: crate::veryl_token::Token, /* always_comb */
 }
 
 ///
@@ -4903,7 +4903,7 @@ pub struct AlwaysFfReset {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct AlwaysFfTerm {
-    pub always_ff_term: crate::veryl_token::Token, /* (?-u:\b)always_ff(?-u:\b) */
+    pub always_ff_term: crate::veryl_token::Token, /* always_ff */
 }
 
 ///
@@ -5096,7 +5096,7 @@ pub struct As {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct AsTerm {
-    pub as_term: crate::veryl_token::Token, /* (?-u:\b)as(?-u:\b) */
+    pub as_term: crate::veryl_token::Token, /* as */
 }
 
 ///
@@ -5141,7 +5141,7 @@ pub struct AssignDeclaration {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct AssignTerm {
-    pub assign_term: crate::veryl_token::Token, /* (?-u:\b)assign(?-u:\b) */
+    pub assign_term: crate::veryl_token::Token, /* assign */
 }
 
 ///
@@ -5324,7 +5324,7 @@ pub struct BaseLess {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct BaseLessTerm {
-    pub base_less_term: crate::veryl_token::Token, /* [0-9]+(?:_[0-9]+)* */
+    pub base_less_term: crate::veryl_token::Token, /* [0-9]+(_[0-9]+)* */
 }
 
 ///
@@ -5355,7 +5355,7 @@ pub struct Based {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct BasedTerm {
-    pub based_term: crate::veryl_token::Token, /* (?:[0-9]+(?:_[0-9]+)*)?'s?[bodh][0-9a-fA-FxzXZ]+(?:_[0-9a-fA-FxzXZ]+)* */
+    pub based_term: crate::veryl_token::Token, /* ([0-9]+(_[0-9]+)*)?'s?[bodh][0-9a-fA-FxzXZ]+(_[0-9a-fA-FxzXZ]+)* */
 }
 
 ///
@@ -5386,7 +5386,7 @@ pub struct Bit {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct BitTerm {
-    pub bit_term: crate::veryl_token::Token, /* (?-u:\b)bit(?-u:\b) */
+    pub bit_term: crate::veryl_token::Token, /* bit */
 }
 
 ///
@@ -5428,7 +5428,7 @@ pub struct BreakStatement {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct BreakTerm {
-    pub break_term: crate::veryl_token::Token, /* (?-u:\b)break(?-u:\b) */
+    pub break_term: crate::veryl_token::Token, /* break */
 }
 
 ///
@@ -5582,7 +5582,7 @@ pub struct CaseStatementList {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct CaseTerm {
-    pub case_term: crate::veryl_token::Token, /* (?-u:\b)case(?-u:\b) */
+    pub case_term: crate::veryl_token::Token, /* case */
 }
 
 ///
@@ -5657,7 +5657,7 @@ pub struct ClockNegedge {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ClockNegedgeTerm {
-    pub clock_negedge_term: crate::veryl_token::Token, /* (?-u:\b)clock_negedge(?-u:\b) */
+    pub clock_negedge_term: crate::veryl_token::Token, /* clock_negedge */
 }
 
 ///
@@ -5688,7 +5688,7 @@ pub struct ClockPosedge {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ClockPosedgeTerm {
-    pub clock_posedge_term: crate::veryl_token::Token, /* (?-u:\b)clock_posedge(?-u:\b) */
+    pub clock_posedge_term: crate::veryl_token::Token, /* clock_posedge */
 }
 
 ///
@@ -5709,7 +5709,7 @@ pub struct ClockPosedgeToken {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ClockTerm {
-    pub clock_term: crate::veryl_token::Token, /* (?-u:\b)clock(?-u:\b) */
+    pub clock_term: crate::veryl_token::Token, /* clock */
 }
 
 ///
@@ -5874,7 +5874,7 @@ pub struct CommentsOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct CommentsTerm {
-    pub comments_term: crate::veryl_token::Token, /* (?:(?:(?://.*(?:\r\n|\r|\n|$))|(?:(?ms)/\u{2a}.*?\u{2a}/))\s*)+ */
+    pub comments_term: crate::veryl_token::Token, /* (//.*(\r\n|\r|\n)|/\*([^*]|\*[^/])*\*\/\s*)+ */
 }
 
 ///
@@ -5973,7 +5973,7 @@ pub enum ConstDeclarationGroup {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ConstTerm {
-    pub const_term: crate::veryl_token::Token, /* (?-u:\b)const(?-u:\b) */
+    pub const_term: crate::veryl_token::Token, /* const */
 }
 
 ///
@@ -6004,7 +6004,7 @@ pub struct Defaul {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct DefaultTerm {
-    pub default_term: crate::veryl_token::Token, /* (?-u:\b)default(?-u:\b) */
+    pub default_term: crate::veryl_token::Token, /* default */
 }
 
 ///
@@ -6231,7 +6231,7 @@ pub struct Else {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ElseTerm {
-    pub else_term: crate::veryl_token::Token, /* (?-u:\b)else(?-u:\b) */
+    pub else_term: crate::veryl_token::Token, /* else */
 }
 
 ///
@@ -6334,7 +6334,7 @@ pub struct EmbedItemList {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct EmbedTerm {
-    pub embed_term: crate::veryl_token::Token, /* (?-u:\b)embed(?-u:\b) */
+    pub embed_term: crate::veryl_token::Token, /* embed */
 }
 
 ///
@@ -6477,7 +6477,7 @@ pub struct EnumListOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct EnumTerm {
-    pub enum_term: crate::veryl_token::Token, /* (?-u:\b)enum(?-u:\b) */
+    pub enum_term: crate::veryl_token::Token, /* enum */
 }
 
 ///
@@ -6539,7 +6539,7 @@ pub struct Exponent {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ExponentTerm {
-    pub exponent_term: crate::veryl_token::Token, /* [0-9]+(?:_[0-9]+)*\.[0-9]+(?:_[0-9]+)*[eE][+-]?[0-9]+(?:_[0-9]+)* */
+    pub exponent_term: crate::veryl_token::Token, /* [0-9]+(_[0-9]+)*\.[0-9]+(_[0-9]+)*[eE][+-]?[0-9]+(_[0-9]+)* */
 }
 
 ///
@@ -6605,7 +6605,7 @@ pub struct ExportDeclarationOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ExportTerm {
-    pub export_term: crate::veryl_token::Token, /* (?-u:\b)export(?-u:\b) */
+    pub export_term: crate::veryl_token::Token, /* export */
 }
 
 ///
@@ -6988,7 +6988,7 @@ pub struct F32 {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct F32Term {
-    pub f32_term: crate::veryl_token::Token, /* (?-u:\b)f32(?-u:\b) */
+    pub f32_term: crate::veryl_token::Token, /* f32 */
 }
 
 ///
@@ -7019,7 +7019,7 @@ pub struct F64 {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct F64Term {
-    pub f64_term: crate::veryl_token::Token, /* (?-u:\b)f64(?-u:\b) */
+    pub f64_term: crate::veryl_token::Token, /* f64 */
 }
 
 ///
@@ -7101,7 +7101,7 @@ pub struct FinalDeclaration {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct FinalTerm {
-    pub final_term: crate::veryl_token::Token, /* (?-u:\b)final(?-u:\b) */
+    pub final_term: crate::veryl_token::Token, /* final */
 }
 
 ///
@@ -7132,7 +7132,7 @@ pub struct FixedPoint {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct FixedPointTerm {
-    pub fixed_point_term: crate::veryl_token::Token, /* [0-9]+(?:_[0-9]+)*\.[0-9]+(?:_[0-9]+)* */
+    pub fixed_point_term: crate::veryl_token::Token, /* [0-9]+(_[0-9]+)*\.[0-9]+(_[0-9]+)* */
 }
 
 ///
@@ -7207,7 +7207,7 @@ pub struct ForStatementOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ForTerm {
-    pub for_term: crate::veryl_token::Token, /* (?-u:\b)for(?-u:\b) */
+    pub for_term: crate::veryl_token::Token, /* for */
 }
 
 ///
@@ -7306,7 +7306,7 @@ pub struct FunctionDeclarationOpt1 {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct FunctionTerm {
-    pub function_term: crate::veryl_token::Token, /* (?-u:\b)function(?-u:\b) */
+    pub function_term: crate::veryl_token::Token, /* function */
 }
 
 ///
@@ -7623,7 +7623,7 @@ pub struct I32 {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct I32Term {
-    pub i32_term: crate::veryl_token::Token, /* (?-u:\b)i32(?-u:\b) */
+    pub i32_term: crate::veryl_token::Token, /* i32 */
 }
 
 ///
@@ -7654,7 +7654,7 @@ pub struct I64 {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct I64Term {
-    pub i64_term: crate::veryl_token::Token, /* (?-u:\b)i64(?-u:\b) */
+    pub i64_term: crate::veryl_token::Token, /* i64 */
 }
 
 ///
@@ -7707,7 +7707,7 @@ pub enum IdentifierStatementGroup {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct IdentifierTerm {
-    pub identifier_term: crate::veryl_token::Token, /* (?:r#)?[a-zA-Z_][0-9a-zA-Z_$]* */
+    pub identifier_term: crate::veryl_token::Token, /* (r#)?[a-zA-Z_][0-9a-zA-Z_$]* */
 }
 
 ///
@@ -7819,7 +7819,7 @@ pub struct IfResetStatementOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct IfResetTerm {
-    pub if_reset_term: crate::veryl_token::Token, /* (?-u:\b)if_reset(?-u:\b) */
+    pub if_reset_term: crate::veryl_token::Token, /* if_reset */
 }
 
 ///
@@ -7878,7 +7878,7 @@ pub struct IfStatementOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct IfTerm {
-    pub if_term: crate::veryl_token::Token, /* (?-u:\b)if(?-u:\b) */
+    pub if_term: crate::veryl_token::Token, /* if */
 }
 
 ///
@@ -7933,7 +7933,7 @@ pub struct ImportDeclarationOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ImportTerm {
-    pub import_term: crate::veryl_token::Token, /* (?-u:\b)import(?-u:\b) */
+    pub import_term: crate::veryl_token::Token, /* import */
 }
 
 ///
@@ -7964,7 +7964,7 @@ pub struct In {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct InTerm {
-    pub in_term: crate::veryl_token::Token, /* (?-u:\b)in(?-u:\b) */
+    pub in_term: crate::veryl_token::Token, /* in */
 }
 
 ///
@@ -8011,7 +8011,7 @@ pub struct IncludeDeclaration {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct IncludeTerm {
-    pub include_term: crate::veryl_token::Token, /* (?-u:\b)include(?-u:\b) */
+    pub include_term: crate::veryl_token::Token, /* include */
 }
 
 ///
@@ -8053,7 +8053,7 @@ pub struct InitialDeclaration {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct InitialTerm {
-    pub initial_term: crate::veryl_token::Token, /* (?-u:\b)initial(?-u:\b) */
+    pub initial_term: crate::veryl_token::Token, /* initial */
 }
 
 ///
@@ -8084,7 +8084,7 @@ pub struct Inout {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct InoutTerm {
-    pub inout_term: crate::veryl_token::Token, /* (?-u:\b)inout(?-u:\b) */
+    pub inout_term: crate::veryl_token::Token, /* inout */
 }
 
 ///
@@ -8115,7 +8115,7 @@ pub struct Input {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct InputTerm {
-    pub input_term: crate::veryl_token::Token, /* (?-u:\b)input(?-u:\b) */
+    pub input_term: crate::veryl_token::Token, /* input */
 }
 
 ///
@@ -8160,7 +8160,7 @@ pub struct InsideExpression {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct InsideTerm {
-    pub inside_term: crate::veryl_token::Token, /* (?-u:\b)inside(?-u:\b) */
+    pub inside_term: crate::veryl_token::Token, /* inside */
 }
 
 ///
@@ -8445,7 +8445,7 @@ pub struct InstPortListOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct InstTerm {
-    pub inst_term: crate::veryl_token::Token, /* (?-u:\b)inst(?-u:\b) */
+    pub inst_term: crate::veryl_token::Token, /* inst */
 }
 
 ///
@@ -8595,7 +8595,7 @@ pub enum InterfaceItem {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct InterfaceTerm {
-    pub interface_term: crate::veryl_token::Token, /* (?-u:\b)interface(?-u:\b) */
+    pub interface_term: crate::veryl_token::Token, /* interface */
 }
 
 ///
@@ -8804,7 +8804,7 @@ pub struct LetStatementOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct LetTerm {
-    pub let_term: crate::veryl_token::Token, /* (?-u:\b)let(?-u:\b) */
+    pub let_term: crate::veryl_token::Token, /* let */
 }
 
 ///
@@ -8835,7 +8835,7 @@ pub struct Logic {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct LogicTerm {
-    pub logic_term: crate::veryl_token::Token, /* (?-u:\b)logic(?-u:\b) */
+    pub logic_term: crate::veryl_token::Token, /* logic */
 }
 
 ///
@@ -8866,7 +8866,7 @@ pub struct Lsb {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct LsbTerm {
-    pub lsb_term: crate::veryl_token::Token, /* (?-u:\b)lsb(?-u:\b) */
+    pub lsb_term: crate::veryl_token::Token, /* lsb */
 }
 
 ///
@@ -9049,7 +9049,7 @@ pub struct ModportListOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ModportTerm {
-    pub modport_term: crate::veryl_token::Token, /* (?-u:\b)modport(?-u:\b) */
+    pub modport_term: crate::veryl_token::Token, /* modport */
 }
 
 ///
@@ -9211,7 +9211,7 @@ pub struct ModuleItem {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ModuleTerm {
-    pub module_term: crate::veryl_token::Token, /* (?-u:\b)module(?-u:\b) */
+    pub module_term: crate::veryl_token::Token, /* module */
 }
 
 ///
@@ -9242,7 +9242,7 @@ pub struct Msb {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct MsbTerm {
-    pub msb_term: crate::veryl_token::Token, /* (?-u:\b)msb(?-u:\b) */
+    pub msb_term: crate::veryl_token::Token, /* msb */
 }
 
 ///
@@ -9624,7 +9624,7 @@ pub struct Output {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct OutputTerm {
-    pub output_term: crate::veryl_token::Token, /* (?-u:\b)output(?-u:\b) */
+    pub output_term: crate::veryl_token::Token, /* output */
 }
 
 ///
@@ -9669,7 +9669,7 @@ pub struct OutsideExpression {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct OutsideTerm {
-    pub outside_term: crate::veryl_token::Token, /* (?-u:\b)outside(?-u:\b) */
+    pub outside_term: crate::veryl_token::Token, /* outside */
 }
 
 ///
@@ -9803,7 +9803,7 @@ pub enum PackageItem {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct PackageTerm {
-    pub package_term: crate::veryl_token::Token, /* (?-u:\b)package(?-u:\b) */
+    pub package_term: crate::veryl_token::Token, /* package */
 }
 
 ///
@@ -9834,7 +9834,7 @@ pub struct Param {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ParamTerm {
-    pub param_term: crate::veryl_token::Token, /* (?-u:\b)param(?-u:\b) */
+    pub param_term: crate::veryl_token::Token, /* param */
 }
 
 ///
@@ -10104,7 +10104,7 @@ pub struct ProtoModuleDeclarationOpt1 {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ProtoTerm {
-    pub proto_term: crate::veryl_token::Token, /* (?-u:\b)proto(?-u:\b) */
+    pub proto_term: crate::veryl_token::Token, /* proto */
 }
 
 ///
@@ -10135,7 +10135,7 @@ pub struct Pub {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct PubTerm {
-    pub pub_term: crate::veryl_token::Token, /* (?-u:\b)pub(?-u:\b) */
+    pub pub_term: crate::veryl_token::Token, /* pub */
 }
 
 ///
@@ -10406,7 +10406,7 @@ pub struct Ref {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct RefTerm {
-    pub ref_term: crate::veryl_token::Token, /* (?-u:\b)ref(?-u:\b) */
+    pub ref_term: crate::veryl_token::Token, /* ref */
 }
 
 ///
@@ -10437,7 +10437,7 @@ pub struct Repeat {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct RepeatTerm {
-    pub repeat_term: crate::veryl_token::Token, /* (?-u:\b)repeat(?-u:\b) */
+    pub repeat_term: crate::veryl_token::Token, /* repeat */
 }
 
 ///
@@ -10478,7 +10478,7 @@ pub struct ResetAsyncHigh {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ResetAsyncHighTerm {
-    pub reset_async_high_term: crate::veryl_token::Token, /* (?-u:\b)reset_async_high(?-u:\b) */
+    pub reset_async_high_term: crate::veryl_token::Token, /* reset_async_high */
 }
 
 ///
@@ -10509,7 +10509,7 @@ pub struct ResetAsyncLow {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ResetAsyncLowTerm {
-    pub reset_async_low_term: crate::veryl_token::Token, /* (?-u:\b)reset_async_low(?-u:\b) */
+    pub reset_async_low_term: crate::veryl_token::Token, /* reset_async_low */
 }
 
 ///
@@ -10540,7 +10540,7 @@ pub struct ResetSyncHigh {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ResetSyncHighTerm {
-    pub reset_sync_high_term: crate::veryl_token::Token, /* (?-u:\b)reset_sync_high(?-u:\b) */
+    pub reset_sync_high_term: crate::veryl_token::Token, /* reset_sync_high */
 }
 
 ///
@@ -10571,7 +10571,7 @@ pub struct ResetSyncLow {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ResetSyncLowTerm {
-    pub reset_sync_low_term: crate::veryl_token::Token, /* (?-u:\b)reset_sync_low(?-u:\b) */
+    pub reset_sync_low_term: crate::veryl_token::Token, /* reset_sync_low */
 }
 
 ///
@@ -10592,7 +10592,7 @@ pub struct ResetSyncLowToken {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ResetTerm {
-    pub reset_term: crate::veryl_token::Token, /* (?-u:\b)reset(?-u:\b) */
+    pub reset_term: crate::veryl_token::Token, /* reset */
 }
 
 ///
@@ -10635,7 +10635,7 @@ pub struct ReturnStatement {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct ReturnTerm {
-    pub return_term: crate::veryl_token::Token, /* (?-u:\b)return(?-u:\b) */
+    pub return_term: crate::veryl_token::Token, /* return */
 }
 
 ///
@@ -10827,7 +10827,7 @@ pub struct Signed {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct SignedTerm {
-    pub signed_term: crate::veryl_token::Token, /* (?-u:\b)signed(?-u:\b) */
+    pub signed_term: crate::veryl_token::Token, /* signed */
 }
 
 ///
@@ -10958,7 +10958,7 @@ pub struct Step {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct StepTerm {
-    pub step_term: crate::veryl_token::Token, /* (?-u:\b)step(?-u:\b) */
+    pub step_term: crate::veryl_token::Token, /* step */
 }
 
 ///
@@ -10999,7 +10999,7 @@ pub struct StringLiteral {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct StringLiteralTerm {
-    pub string_literal_term: crate::veryl_token::Token, /* \u{0022}(?:\\[\u{0022}\\/bfnrt]|u[0-9a-fA-F]{4}|[^\u{0022}\\\u0000-\u001F])*\u{0022} */
+    pub string_literal_term: crate::veryl_token::Token, /* \u{0022}(\\[\u{0022}\\/bfnrt]|u[0-9a-fA-F]{4}|[^\u{0022}\\\u0000-\u001F])*\u{0022} */
 }
 
 ///
@@ -11020,7 +11020,7 @@ pub struct StringLiteralToken {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct StringTerm {
-    pub string_term: crate::veryl_token::Token, /* (?-u:\b)string(?-u:\b) */
+    pub string_term: crate::veryl_token::Token, /* string */
 }
 
 ///
@@ -11051,7 +11051,7 @@ pub struct Struct {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct StructTerm {
-    pub struct_term: crate::veryl_token::Token, /* (?-u:\b)struct(?-u:\b) */
+    pub struct_term: crate::veryl_token::Token, /* struct */
 }
 
 ///
@@ -11314,7 +11314,7 @@ pub struct SwitchStatementList {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct SwitchTerm {
-    pub switch_term: crate::veryl_token::Token, /* (?-u:\b)switch(?-u:\b) */
+    pub switch_term: crate::veryl_token::Token, /* switch */
 }
 
 ///
@@ -11345,7 +11345,7 @@ pub struct Tri {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct TriTerm {
-    pub tri_term: crate::veryl_token::Token, /* (?-u:\b)tri(?-u:\b) */
+    pub tri_term: crate::veryl_token::Token, /* tri */
 }
 
 ///
@@ -11410,7 +11410,7 @@ pub enum TypeModifier {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct TypeTerm {
-    pub type_term: crate::veryl_token::Token, /* (?-u:\b)type(?-u:\b) */
+    pub type_term: crate::veryl_token::Token, /* type */
 }
 
 ///
@@ -11441,7 +11441,7 @@ pub struct U32 {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct U32Term {
-    pub u32_term: crate::veryl_token::Token, /* (?-u:\b)u32(?-u:\b) */
+    pub u32_term: crate::veryl_token::Token, /* u32 */
 }
 
 ///
@@ -11472,7 +11472,7 @@ pub struct U64 {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct U64Term {
-    pub u64_term: crate::veryl_token::Token, /* (?-u:\b)u64(?-u:\b) */
+    pub u64_term: crate::veryl_token::Token, /* u64 */
 }
 
 ///
@@ -11534,7 +11534,7 @@ pub struct Union {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct UnionTerm {
-    pub union_term: crate::veryl_token::Token, /* (?-u:\b)union(?-u:\b) */
+    pub union_term: crate::veryl_token::Token, /* union */
 }
 
 ///
@@ -11591,7 +11591,7 @@ pub struct UnsafeBlockList {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct UnsafeTerm {
-    pub unsafe_term: crate::veryl_token::Token, /* (?-u:\b)unsafe(?-u:\b) */
+    pub unsafe_term: crate::veryl_token::Token, /* unsafe */
 }
 
 ///
@@ -11647,7 +11647,7 @@ pub struct VarDeclarationOpt {
 #[derive(Builder, Debug, Clone)]
 #[builder(crate = "parol_runtime::derive_builder")]
 pub struct VarTerm {
-    pub var_term: crate::veryl_token::Token, /* (?-u:\b)var(?-u:\b) */
+    pub var_term: crate::veryl_token::Token, /* var */
 }
 
 ///
@@ -12716,7 +12716,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 0:
     ///
-    /// `CommentsTerm: <INITIAL, Generic>"(?:(?:(?://.*(?:\r\n|\r|\n|$))|(?:(?ms)/\u{2a}.*?\u{2a}/))\s*)+" : Token;`
+    /// `CommentsTerm: <INITIAL, Generic>"(//.*(\r\n|\r|\n)|/\*([^*]|\*[^/])*\*/\s*)+" : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn comments_term(&mut self, comments_term: &ParseTreeType<'t>) -> Result<()> {
@@ -12735,7 +12735,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 1:
     ///
-    /// `StringLiteralTerm: <INITIAL, Generic>"\u{0022}(?:\\[\u{0022}\\/bfnrt]|u[0-9a-fA-F]{4}|[^\u{0022}\\\u0000-\u001F])*\u{0022}" : Token;`
+    /// `StringLiteralTerm: <INITIAL, Generic>"\u{0022}(\\[\u{0022}\\/bfnrt]|u[0-9a-fA-F]{4}|[^\u{0022}\\\u0000-\u001F])*\u{0022}" : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn string_literal_term(&mut self, string_literal_term: &ParseTreeType<'t>) -> Result<()> {
@@ -12760,7 +12760,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 2:
     ///
-    /// `ExponentTerm: <INITIAL, Generic>/[0-9]+(?:_[0-9]+)*\.[0-9]+(?:_[0-9]+)*[eE][+-]?[0-9]+(?:_[0-9]+)*/ : Token;`
+    /// `ExponentTerm: <INITIAL, Generic>/[0-9]+(_[0-9]+)*\.[0-9]+(_[0-9]+)*[eE][+-]?[0-9]+(_[0-9]+)*/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn exponent_term(&mut self, exponent_term: &ParseTreeType<'t>) -> Result<()> {
@@ -12779,7 +12779,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 3:
     ///
-    /// `FixedPointTerm: <INITIAL, Generic>/[0-9]+(?:_[0-9]+)*\.[0-9]+(?:_[0-9]+)*/ : Token;`
+    /// `FixedPointTerm: <INITIAL, Generic>/[0-9]+(_[0-9]+)*\.[0-9]+(_[0-9]+)*/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn fixed_point_term(&mut self, fixed_point_term: &ParseTreeType<'t>) -> Result<()> {
@@ -12799,7 +12799,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 4:
     ///
-    /// `BasedTerm: <INITIAL, Generic>/(?:[0-9]+(?:_[0-9]+)*)?'s?[bodh][0-9a-fA-FxzXZ]+(?:_[0-9a-fA-FxzXZ]+)*/ : Token;`
+    /// `BasedTerm: <INITIAL, Generic>/([0-9]+(_[0-9]+)*)?'s?[bodh][0-9a-fA-FxzXZ]+(_[0-9a-fA-FxzXZ]+)*/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn based_term(&mut self, based_term: &ParseTreeType<'t>) -> Result<()> {
@@ -12818,7 +12818,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 5:
     ///
-    /// `AllBitTerm: <INITIAL, Generic>/(?:[0-9]+(?:_[0-9]+)*)?'[01xzXZ]/ : Token;`
+    /// `AllBitTerm: <INITIAL, Generic>/([0-9]+(_[0-9]+)*)?'[01xzXZ]/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn all_bit_term(&mut self, all_bit_term: &ParseTreeType<'t>) -> Result<()> {
@@ -12837,7 +12837,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 6:
     ///
-    /// `BaseLessTerm: <INITIAL, Generic>/[0-9]+(?:_[0-9]+)*/ : Token;`
+    /// `BaseLessTerm: <INITIAL, Generic>/[0-9]+(_[0-9]+)*/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn base_less_term(&mut self, base_less_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13018,7 +13018,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 15:
     ///
-    /// `Operator07Term: "<=|>=|<:|>:" : Token;`
+    /// `Operator07Term: "<=|>=|<:|>:" : Token ?! ":";`
     ///
     #[parol_runtime::function_name::named]
     fn operator07_term(&mut self, operator07_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13587,7 +13587,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 44:
     ///
-    /// `AlwaysCombTerm: <INITIAL, Generic>/(?-u:\b)always_comb(?-u:\b)/ : Token;`
+    /// `AlwaysCombTerm: <INITIAL, Generic>/always_comb/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn always_comb_term(&mut self, always_comb_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13607,7 +13607,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 45:
     ///
-    /// `AlwaysFfTerm: <INITIAL, Generic>/(?-u:\b)always_ff(?-u:\b)/ : Token;`
+    /// `AlwaysFfTerm: <INITIAL, Generic>/always_ff/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn always_ff_term(&mut self, always_ff_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13626,7 +13626,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 46:
     ///
-    /// `AssignTerm: <INITIAL, Generic>/(?-u:\b)assign(?-u:\b)/ : Token;`
+    /// `AssignTerm: <INITIAL, Generic>/assign/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn assign_term(&mut self, assign_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13645,7 +13645,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 47:
     ///
-    /// `AsTerm: <INITIAL, Generic>/(?-u:\b)as(?-u:\b)/ : Token;`
+    /// `AsTerm: <INITIAL, Generic>/as/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn as_term(&mut self, as_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13664,7 +13664,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 48:
     ///
-    /// `BitTerm: <INITIAL, Generic>/(?-u:\b)bit(?-u:\b)/ : Token;`
+    /// `BitTerm: <INITIAL, Generic>/bit/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn bit_term(&mut self, bit_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13683,7 +13683,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 49:
     ///
-    /// `CaseTerm: <INITIAL, Generic>/(?-u:\b)case(?-u:\b)/ : Token;`
+    /// `CaseTerm: <INITIAL, Generic>/case/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn case_term(&mut self, case_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13702,7 +13702,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 50:
     ///
-    /// `ClockTerm: <INITIAL, Generic>/(?-u:\b)clock(?-u:\b)/ : Token;`
+    /// `ClockTerm: <INITIAL, Generic>/clock/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn clock_term(&mut self, clock_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13721,7 +13721,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 51:
     ///
-    /// `ClockPosedgeTerm: <INITIAL, Generic>/(?-u:\b)clock_posedge(?-u:\b)/ : Token;`
+    /// `ClockPosedgeTerm: <INITIAL, Generic>/clock_posedge/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn clock_posedge_term(&mut self, clock_posedge_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13741,7 +13741,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 52:
     ///
-    /// `ClockNegedgeTerm: <INITIAL, Generic>/(?-u:\b)clock_negedge(?-u:\b)/ : Token;`
+    /// `ClockNegedgeTerm: <INITIAL, Generic>/clock_negedge/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn clock_negedge_term(&mut self, clock_negedge_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13761,7 +13761,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 53:
     ///
-    /// `ConstTerm: <INITIAL, Generic>/(?-u:\b)const(?-u:\b)/ : Token;`
+    /// `ConstTerm: <INITIAL, Generic>/const/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn const_term(&mut self, const_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13780,7 +13780,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 54:
     ///
-    /// `DefaultTerm: <INITIAL, Generic>/(?-u:\b)default(?-u:\b)/ : Token;`
+    /// `DefaultTerm: <INITIAL, Generic>/default/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn default_term(&mut self, default_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13799,7 +13799,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 55:
     ///
-    /// `ElseTerm: <INITIAL, Generic>/(?-u:\b)else(?-u:\b)/ : Token;`
+    /// `ElseTerm: <INITIAL, Generic>/else/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn else_term(&mut self, else_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13818,7 +13818,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 56:
     ///
-    /// `EmbedTerm: <INITIAL, Generic>/(?-u:\b)embed(?-u:\b)/ : Token;`
+    /// `EmbedTerm: <INITIAL, Generic>/embed/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn embed_term(&mut self, embed_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13837,7 +13837,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 57:
     ///
-    /// `EnumTerm: <INITIAL, Generic>/(?-u:\b)enum(?-u:\b)/ : Token;`
+    /// `EnumTerm: <INITIAL, Generic>/enum/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn enum_term(&mut self, enum_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13856,7 +13856,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 58:
     ///
-    /// `ExportTerm: <INITIAL, Generic>/(?-u:\b)export(?-u:\b)/ : Token;`
+    /// `ExportTerm: <INITIAL, Generic>/export/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn export_term(&mut self, export_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13875,7 +13875,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 59:
     ///
-    /// `F32Term: <INITIAL, Generic>/(?-u:\b)f32(?-u:\b)/ : Token;`
+    /// `F32Term: <INITIAL, Generic>/f32/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn f32_term(&mut self, f32_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13894,7 +13894,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 60:
     ///
-    /// `F64Term: <INITIAL, Generic>/(?-u:\b)f64(?-u:\b)/ : Token;`
+    /// `F64Term: <INITIAL, Generic>/f64/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn f64_term(&mut self, f64_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13913,7 +13913,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 61:
     ///
-    /// `FinalTerm: <INITIAL, Generic>/(?-u:\b)final(?-u:\b)/ : Token;`
+    /// `FinalTerm: <INITIAL, Generic>/final/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn final_term(&mut self, final_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13932,7 +13932,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 62:
     ///
-    /// `ForTerm: <INITIAL, Generic>/(?-u:\b)for(?-u:\b)/ : Token;`
+    /// `ForTerm: <INITIAL, Generic>/for/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn for_term(&mut self, for_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13951,7 +13951,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 63:
     ///
-    /// `FunctionTerm: <INITIAL, Generic>/(?-u:\b)function(?-u:\b)/ : Token;`
+    /// `FunctionTerm: <INITIAL, Generic>/function/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn function_term(&mut self, function_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13970,7 +13970,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 64:
     ///
-    /// `I32Term: <INITIAL, Generic>/(?-u:\b)i32(?-u:\b)/ : Token;`
+    /// `I32Term: <INITIAL, Generic>/i32/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn i32_term(&mut self, i32_term: &ParseTreeType<'t>) -> Result<()> {
@@ -13989,7 +13989,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 65:
     ///
-    /// `I64Term: <INITIAL, Generic>/(?-u:\b)i64(?-u:\b)/ : Token;`
+    /// `I64Term: <INITIAL, Generic>/i64/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn i64_term(&mut self, i64_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14008,7 +14008,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 66:
     ///
-    /// `IfResetTerm: <INITIAL, Generic>/(?-u:\b)if_reset(?-u:\b)/ : Token;`
+    /// `IfResetTerm: <INITIAL, Generic>/if_reset/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn if_reset_term(&mut self, if_reset_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14027,7 +14027,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 67:
     ///
-    /// `IfTerm: <INITIAL, Generic>/(?-u:\b)if(?-u:\b)/ : Token;`
+    /// `IfTerm: <INITIAL, Generic>/if/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn if_term(&mut self, if_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14046,7 +14046,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 68:
     ///
-    /// `ImportTerm: <INITIAL, Generic>/(?-u:\b)import(?-u:\b)/ : Token;`
+    /// `ImportTerm: <INITIAL, Generic>/import/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn import_term(&mut self, import_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14065,7 +14065,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 69:
     ///
-    /// `IncludeTerm: <INITIAL, Generic>/(?-u:\b)include(?-u:\b)/ : Token;`
+    /// `IncludeTerm: <INITIAL, Generic>/include/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn include_term(&mut self, include_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14084,7 +14084,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 70:
     ///
-    /// `InitialTerm: <INITIAL, Generic>/(?-u:\b)initial(?-u:\b)/ : Token;`
+    /// `InitialTerm: <INITIAL, Generic>/initial/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn initial_term(&mut self, initial_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14103,7 +14103,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 71:
     ///
-    /// `InoutTerm: <INITIAL, Generic>/(?-u:\b)inout(?-u:\b)/ : Token;`
+    /// `InoutTerm: <INITIAL, Generic>/inout/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn inout_term(&mut self, inout_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14122,7 +14122,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 72:
     ///
-    /// `InputTerm: <INITIAL, Generic>/(?-u:\b)input(?-u:\b)/ : Token;`
+    /// `InputTerm: <INITIAL, Generic>/input/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn input_term(&mut self, input_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14141,7 +14141,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 73:
     ///
-    /// `InsideTerm: <INITIAL, Generic>/(?-u:\b)inside(?-u:\b)/ : Token;`
+    /// `InsideTerm: <INITIAL, Generic>/inside/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn inside_term(&mut self, inside_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14160,7 +14160,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 74:
     ///
-    /// `InstTerm: <INITIAL, Generic>/(?-u:\b)inst(?-u:\b)/ : Token;`
+    /// `InstTerm: <INITIAL, Generic>/inst/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn inst_term(&mut self, inst_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14179,7 +14179,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 75:
     ///
-    /// `InterfaceTerm: <INITIAL, Generic>/(?-u:\b)interface(?-u:\b)/ : Token;`
+    /// `InterfaceTerm: <INITIAL, Generic>/interface/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn interface_term(&mut self, interface_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14198,7 +14198,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 76:
     ///
-    /// `InTerm: <INITIAL, Generic>/(?-u:\b)in(?-u:\b)/ : Token;`
+    /// `InTerm: <INITIAL, Generic>/in/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn in_term(&mut self, in_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14217,7 +14217,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 77:
     ///
-    /// `LetTerm: <INITIAL, Generic>/(?-u:\b)let(?-u:\b)/ : Token;`
+    /// `LetTerm: <INITIAL, Generic>/let/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn let_term(&mut self, let_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14236,7 +14236,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 78:
     ///
-    /// `LogicTerm: <INITIAL, Generic>/(?-u:\b)logic(?-u:\b)/ : Token;`
+    /// `LogicTerm: <INITIAL, Generic>/logic/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn logic_term(&mut self, logic_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14255,7 +14255,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 79:
     ///
-    /// `LsbTerm: <INITIAL, Generic>/(?-u:\b)lsb(?-u:\b)/ : Token;`
+    /// `LsbTerm: <INITIAL, Generic>/lsb/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn lsb_term(&mut self, lsb_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14274,7 +14274,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 80:
     ///
-    /// `ModportTerm: <INITIAL, Generic>/(?-u:\b)modport(?-u:\b)/ : Token;`
+    /// `ModportTerm: <INITIAL, Generic>/modport/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn modport_term(&mut self, modport_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14293,7 +14293,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 81:
     ///
-    /// `ModuleTerm: <INITIAL, Generic>/(?-u:\b)module(?-u:\b)/ : Token;`
+    /// `ModuleTerm: <INITIAL, Generic>/module/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn module_term(&mut self, module_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14312,7 +14312,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 82:
     ///
-    /// `MsbTerm: <INITIAL, Generic>/(?-u:\b)msb(?-u:\b)/ : Token;`
+    /// `MsbTerm: <INITIAL, Generic>/msb/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn msb_term(&mut self, msb_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14331,7 +14331,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 83:
     ///
-    /// `OutputTerm: <INITIAL, Generic>/(?-u:\b)output(?-u:\b)/ : Token;`
+    /// `OutputTerm: <INITIAL, Generic>/output/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn output_term(&mut self, output_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14350,7 +14350,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 84:
     ///
-    /// `OutsideTerm: <INITIAL, Generic>/(?-u:\b)outside(?-u:\b)/ : Token;`
+    /// `OutsideTerm: <INITIAL, Generic>/outside/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn outside_term(&mut self, outside_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14369,7 +14369,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 85:
     ///
-    /// `PackageTerm: <INITIAL, Generic>/(?-u:\b)package(?-u:\b)/ : Token;`
+    /// `PackageTerm: <INITIAL, Generic>/package/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn package_term(&mut self, package_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14388,7 +14388,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 86:
     ///
-    /// `ParamTerm: <INITIAL, Generic>/(?-u:\b)param(?-u:\b)/ : Token;`
+    /// `ParamTerm: <INITIAL, Generic>/param/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn param_term(&mut self, param_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14407,7 +14407,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 87:
     ///
-    /// `ProtoTerm: <INITIAL, Generic>/(?-u:\b)proto(?-u:\b)/ : Token;`
+    /// `ProtoTerm: <INITIAL, Generic>/proto/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn proto_term(&mut self, proto_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14426,7 +14426,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 88:
     ///
-    /// `PubTerm: <INITIAL, Generic>/(?-u:\b)pub(?-u:\b)/ : Token;`
+    /// `PubTerm: <INITIAL, Generic>/pub/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn pub_term(&mut self, pub_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14445,7 +14445,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 89:
     ///
-    /// `RefTerm: <INITIAL, Generic>/(?-u:\b)ref(?-u:\b)/ : Token;`
+    /// `RefTerm: <INITIAL, Generic>/ref/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn ref_term(&mut self, ref_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14464,7 +14464,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 90:
     ///
-    /// `RepeatTerm: <INITIAL, Generic>/(?-u:\b)repeat(?-u:\b)/ : Token;`
+    /// `RepeatTerm: <INITIAL, Generic>/repeat/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn repeat_term(&mut self, repeat_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14483,7 +14483,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 91:
     ///
-    /// `ResetTerm: <INITIAL, Generic>/(?-u:\b)reset(?-u:\b)/ : Token;`
+    /// `ResetTerm: <INITIAL, Generic>/reset/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn reset_term(&mut self, reset_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14502,7 +14502,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 92:
     ///
-    /// `ResetAsyncHighTerm: <INITIAL, Generic>/(?-u:\b)reset_async_high(?-u:\b)/ : Token;`
+    /// `ResetAsyncHighTerm: <INITIAL, Generic>/reset_async_high/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn reset_async_high_term(&mut self, reset_async_high_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14527,7 +14527,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 93:
     ///
-    /// `ResetAsyncLowTerm: <INITIAL, Generic>/(?-u:\b)reset_async_low(?-u:\b)/ : Token;`
+    /// `ResetAsyncLowTerm: <INITIAL, Generic>/reset_async_low/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn reset_async_low_term(&mut self, reset_async_low_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14552,7 +14552,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 94:
     ///
-    /// `ResetSyncHighTerm: <INITIAL, Generic>/(?-u:\b)reset_sync_high(?-u:\b)/ : Token;`
+    /// `ResetSyncHighTerm: <INITIAL, Generic>/reset_sync_high/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn reset_sync_high_term(&mut self, reset_sync_high_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14577,7 +14577,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 95:
     ///
-    /// `ResetSyncLowTerm: <INITIAL, Generic>/(?-u:\b)reset_sync_low(?-u:\b)/ : Token;`
+    /// `ResetSyncLowTerm: <INITIAL, Generic>/reset_sync_low/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn reset_sync_low_term(&mut self, reset_sync_low_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14602,7 +14602,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 96:
     ///
-    /// `ReturnTerm: <INITIAL, Generic>/(?-u:\b)return(?-u:\b)/ : Token;`
+    /// `ReturnTerm: <INITIAL, Generic>/return/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn return_term(&mut self, return_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14621,7 +14621,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 97:
     ///
-    /// `BreakTerm: <INITIAL, Generic>/(?-u:\b)break(?-u:\b)/ : Token;`
+    /// `BreakTerm: <INITIAL, Generic>/break/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn break_term(&mut self, break_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14640,7 +14640,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 98:
     ///
-    /// `SignedTerm: <INITIAL, Generic>/(?-u:\b)signed(?-u:\b)/ : Token;`
+    /// `SignedTerm: <INITIAL, Generic>/signed/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn signed_term(&mut self, signed_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14659,7 +14659,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 99:
     ///
-    /// `StepTerm: <INITIAL, Generic>/(?-u:\b)step(?-u:\b)/ : Token;`
+    /// `StepTerm: <INITIAL, Generic>/step/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn step_term(&mut self, step_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14678,7 +14678,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 100:
     ///
-    /// `StringTerm: <INITIAL, Generic>/(?-u:\b)string(?-u:\b)/ : Token;`
+    /// `StringTerm: <INITIAL, Generic>/string/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn string_term(&mut self, string_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14697,7 +14697,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 101:
     ///
-    /// `StructTerm: <INITIAL, Generic>/(?-u:\b)struct(?-u:\b)/ : Token;`
+    /// `StructTerm: <INITIAL, Generic>/struct/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn struct_term(&mut self, struct_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14716,7 +14716,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 102:
     ///
-    /// `SwitchTerm: <INITIAL, Generic>/(?-u:\b)switch(?-u:\b)/ : Token;`
+    /// `SwitchTerm: <INITIAL, Generic>/switch/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn switch_term(&mut self, switch_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14735,7 +14735,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 103:
     ///
-    /// `TriTerm: <INITIAL, Generic>/(?-u:\b)tri(?-u:\b)/ : Token;`
+    /// `TriTerm: <INITIAL, Generic>/tri/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn tri_term(&mut self, tri_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14754,7 +14754,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 104:
     ///
-    /// `TypeTerm: <INITIAL, Generic>/(?-u:\b)type(?-u:\b)/ : Token;`
+    /// `TypeTerm: <INITIAL, Generic>/type/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn type_term(&mut self, type_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14773,7 +14773,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 105:
     ///
-    /// `U32Term: <INITIAL, Generic>/(?-u:\b)u32(?-u:\b)/ : Token;`
+    /// `U32Term: <INITIAL, Generic>/u32/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn u32_term(&mut self, u32_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14792,7 +14792,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 106:
     ///
-    /// `U64Term: <INITIAL, Generic>/(?-u:\b)u64(?-u:\b)/ : Token;`
+    /// `U64Term: <INITIAL, Generic>/u64/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn u64_term(&mut self, u64_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14811,7 +14811,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 107:
     ///
-    /// `UnionTerm: <INITIAL, Generic>/(?-u:\b)union(?-u:\b)/ : Token;`
+    /// `UnionTerm: <INITIAL, Generic>/union/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn union_term(&mut self, union_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14830,7 +14830,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 108:
     ///
-    /// `UnsafeTerm: <INITIAL, Generic>/(?-u:\b)unsafe(?-u:\b)/ : Token;`
+    /// `UnsafeTerm: <INITIAL, Generic>/unsafe/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn unsafe_term(&mut self, unsafe_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14849,7 +14849,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 109:
     ///
-    /// `VarTerm: <INITIAL, Generic>/(?-u:\b)var(?-u:\b)/ : Token;`
+    /// `VarTerm: <INITIAL, Generic>/var/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn var_term(&mut self, var_term: &ParseTreeType<'t>) -> Result<()> {
@@ -14893,7 +14893,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 111:
     ///
-    /// `IdentifierTerm: <INITIAL, Generic>/(?:r#)?[a-zA-Z_][0-9a-zA-Z_$]*/ : Token;`
+    /// `IdentifierTerm: <INITIAL, Generic>/(r#)?[a-zA-Z_][0-9a-zA-Z_$]*/ : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn identifier_term(&mut self, identifier_term: &ParseTreeType<'t>) -> Result<()> {

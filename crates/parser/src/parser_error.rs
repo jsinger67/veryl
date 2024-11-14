@@ -446,7 +446,7 @@ struct Location(parol_runtime::Location);
 impl From<Location> for SourceSpan {
     fn from(location: Location) -> Self {
         SourceSpan::new(
-            (location.0.scanner_switch_pos + location.0.offset - location.0.length as usize).into(),
+            (location.0.offset + location.0.length as usize).into(),
             location.0.length as usize,
         )
     }
