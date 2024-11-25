@@ -22325,7 +22325,7 @@ where
     // Initialize wrapper
     let mut user_actions = VerylGrammarAuto::new(user_actions);
     llk_parser.parse(
-        TokenStream::new(input, file_name, &SCANNERS, MAX_K, true).unwrap(),
+        TokenStream::new(input, file_name, &SCANNERS, MAX_K).unwrap(),
         &mut user_actions,
     )
 }
