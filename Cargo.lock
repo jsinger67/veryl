@@ -3796,9 +3796,9 @@ dependencies = [
 
 [[package]]
 name = "scnr"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5da27417f2c760cb8e2d66fe9d772addbe1b24f50bcfa834d5d171e1cb5ffe17"
+checksum = "a6f54409a57ac5f2b685347b4407681cce784deaadbcee4da08687aee9c29095"
 dependencies = [
  "dot-writer",
  "log",
@@ -3877,9 +3877,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.132"
+version = "1.0.133"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d726bfaff4b320266d395898905d0eba0345aae23b54aee3a737e260fd46db03"
+checksum = "c7fceb2473b9166b2294ef05efcb65a3db80803f0b03ef86a5fc88a2b85ee377"
 dependencies = [
  "itoa",
  "memchr",

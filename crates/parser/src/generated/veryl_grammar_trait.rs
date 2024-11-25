@@ -13018,7 +13018,7 @@ impl<'t, 'u> VerylGrammarAuto<'t, 'u> {
 
     /// Semantic action for production 15:
     ///
-    /// `Operator07Term: "<=|>=|<:|>:" : Token ?! ":";`
+    /// `Operator07Term: "<=|>=|<:|>:" ?! ":" : Token;`
     ///
     #[parol_runtime::function_name::named]
     fn operator07_term(&mut self, operator07_term: &ParseTreeType<'t>) -> Result<()> {
