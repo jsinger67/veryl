@@ -161,3 +161,177 @@ mod emitter {
 
     include!(concat!(env!("OUT_DIR"), "/test.rs"));
 }
+
+#[cfg(test)]
+mod path {
+    use std::path::PathBuf;
+    use veryl_metadata::{Metadata, SourceMapTarget, Target};
+
+    fn path_test(mut metadata: Metadata, src_exp: &str, dst_exp: &str, map_exp: &str) {
+        let base = metadata.project_path();
+        let paths = metadata.paths::<PathBuf>(&[], false).unwrap();
+
+        for path in paths {
+            if path.src.file_name().unwrap() == "01_number.veryl" {
+                assert_eq!(path.src, base.join(src_exp));
+                assert_eq!(path.dst, base.join(dst_exp));
+                assert_eq!(path.map, base.join(map_exp));
+            }
+        }
+    }
+
+    #[test]
+    fn source_target() {
+        let metadata_path = Metadata::search_from_current().unwrap();
+        let mut metadata = Metadata::load(&metadata_path).unwrap();
+
+        metadata.build.target = Target::Source;
+        metadata.build.sourcemap_target = SourceMapTarget::Target;
+
+        path_test(
+            metadata,
+            "testcases/veryl/01_number.veryl",
+            "testcases/veryl/01_number.sv",
+            "testcases/veryl/01_number.sv.map",
+        );
+    }
+
+    #[test]
+    fn source_directory() {
+        let metadata_path = Metadata::search_from_current().unwrap();
+        let mut metadata = Metadata::load(&metadata_path).unwrap();
+
+        metadata.build.target = Target::Source;
+        metadata.build.sourcemap_target = SourceMapTarget::Directory {
+            path: "testcases/map".into(),
+        };
+
+        path_test(
+            metadata,
+            "testcases/veryl/01_number.veryl",
+            "testcases/veryl/01_number.sv",
+            "testcases/map/testcases/veryl/01_number.sv.map",
+        );
+    }
+
+    #[test]
+    fn directory_target() {
+        let metadata_path = Metadata::search_from_current().unwrap();
+        let mut metadata = Metadata::load(&metadata_path).unwrap();
+
+        metadata.build.target = Target::Directory {
+            path: "testcases/sv".into(),
+        };
+        metadata.build.sourcemap_target = SourceMapTarget::Target;
+
+        path_test(
+            metadata,
+            "testcases/veryl/01_number.veryl",
+            "testcases/sv/01_number.sv",
+            "testcases/sv/01_number.sv.map",
+        );
+    }
+
+    #[test]
+    fn directory_directory() {
+        let metadata_path = Metadata::search_from_current().unwrap();
+        let mut metadata = Metadata::load(&metadata_path).unwrap();
+
+        metadata.build.target = Target::Directory {
+            path: "testcases/sv".into(),
+        };
+        metadata.build.sourcemap_target = SourceMapTarget::Directory {
+            path: "testcases/map".into(),
+        };
+
+        path_test(
+            metadata,
+            "testcases/veryl/01_number.veryl",
+            "testcases/sv/01_number.sv",
+            "testcases/map/testcases/sv/01_number.sv.map",
+        );
+    }
+}
+
+#[cfg(test)]
+mod filelist {
+    use std::fs;
+    use std::path::PathBuf;
+    use veryl_analyzer::Analyzer;
+    use veryl_metadata::Metadata;
+    use veryl_parser::Parser;
+
+    fn check_list(paths: &[String], expected: &[&str]) {
+        let paths: Vec<_> = paths.iter().map(|x| x.as_str()).collect();
+        for x in &paths {
+            assert!(expected.contains(&x));
+        }
+        for x in expected {
+            assert!(paths.contains(x));
+        }
+    }
+
+    fn check_order(paths: &[String], path0: &str, path1: &str) {
+        let path0 = paths
+            .iter()
+            .enumerate()
+            .find_map(|(i, x)| if x == path0 { Some(i) } else { None });
+        let path1 = paths
+            .iter()
+            .enumerate()
+            .find_map(|(i, x)| if x == path1 { Some(i) } else { None });
+        assert!(path0 < path1);
+    }
+
+    #[test]
+    fn test() {
+        let path = std::env::current_dir().unwrap();
+        let path = path.join("../../testcases/filelist");
+        let metadata_path = Metadata::search_from(path).unwrap();
+        let mut metadata = Metadata::load(&metadata_path).unwrap();
+        let paths = metadata.paths::<PathBuf>(&[], false).unwrap();
+
+        let mut contexts = Vec::new();
+
+        for path in &paths {
+            let input = fs::read_to_string(&path.src).unwrap();
+            let parser = Parser::parse(&input, &path.src).unwrap();
+
+            let analyzer = Analyzer::new(&metadata);
+            let _ = analyzer.analyze_pass1(&path.prj, &input, &path.src, &parser.veryl);
+            contexts.push((path, input, parser, analyzer));
+        }
+
+        Analyzer::analyze_post_pass1();
+
+        for (path, input, parser, analyzer) in &contexts {
+            let _ = analyzer.analyze_pass2(&path.prj, input, &path.src, &parser.veryl);
+        }
+
+        for (path, input, parser, analyzer) in &contexts {
+            let _ = analyzer.analyze_pass3(&path.prj, input, &path.src, &parser.veryl);
+        }
+
+        let paths = veryl::cmd_build::CmdBuild::sort_filelist(&metadata, &paths, false);
+        let paths: Vec<_> = paths
+            .into_iter()
+            .map(|x| x.src.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+
+        dbg!(&paths);
+
+        let all = &[
+            "package_a.veryl",
+            "package_b.veryl",
+            "module_a.veryl",
+            "module_b.veryl",
+            "module_c.veryl",
+            "ram.veryl",
+        ];
+        check_list(&paths, all);
+
+        check_order(&paths, "package_a.veryl", "module_a.veryl");
+        check_order(&paths, "package_b.veryl", "module_b.veryl");
+        check_order(&paths, "ram.veryl", "module_c.veryl");
+    }
+}

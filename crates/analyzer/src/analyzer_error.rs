@@ -614,9 +614,31 @@ pub enum AnalyzerError {
         error_location: SourceSpan,
     },
 
-    #[diagnostic(severity(Error), code(invalid_enum_encoding), help(""), url(""))]
+    #[diagnostic(
+        severity(Error),
+        code(invalid_enum_encoding),
+        help(""),
+        url("https://doc.veryl-lang.org/book/07_appendix/02_semantic_error.html#invalid_enum_encoding")
+    )]
     #[error("{identifier} is not valid enum encoding")]
     InvalidEnumEncoding {
+        identifier: String,
+        #[source_code]
+        input: NamedSource<String>,
+        #[label("Error location")]
+        error_location: SourceSpan,
+    },
+
+    #[diagnostic(
+        severity(Error),
+        code(invalid_cond_type),
+        help(""),
+        url(
+            "https://doc.veryl-lang.org/book/07_appendix/02_semantic_error.html#invalid_cond_type"
+        )
+    )]
+    #[error("{identifier} is not valid condition type")]
+    InvalidCondType {
         identifier: String,
         #[source_code]
         input: NamedSource<String>,
@@ -714,6 +736,23 @@ pub enum AnalyzerError {
         input: NamedSource<String>,
         #[label("Error location")]
         error_location: SourceSpan,
+    },
+
+    #[diagnostic(
+        severity(Error),
+        code(unresolvable_generic_argument),
+        help(""),
+        url("https://doc.veryl-lang.org/book/07_appendix/02_semantic_error.html#unresolvable_generic_argument")
+    )]
+    #[error("{identifier} can't be resolved from the definition of generics")]
+    UnresolvableGenericArgument {
+        identifier: String,
+        #[source_code]
+        input: NamedSource<String>,
+        #[label("Error location")]
+        error_location: SourceSpan,
+        #[label("Definition")]
+        definition_location: SourceSpan,
     },
 
     #[diagnostic(
@@ -1395,6 +1434,14 @@ impl AnalyzerError {
         }
     }
 
+    pub fn invalid_cond_type(identifier: &str, source: &str, token: &TokenRange) -> Self {
+        AnalyzerError::InvalidCondType {
+            identifier: identifier.to_string(),
+            input: AnalyzerError::named_source(source, token),
+            error_location: token.into(),
+        }
+    }
+
     pub fn too_large_enum_variant(
         identifier: &str,
         value: isize,
@@ -1462,6 +1509,20 @@ impl AnalyzerError {
             identifier: identifier.to_string(),
             input: AnalyzerError::named_source(source, token),
             error_location: token.into(),
+        }
+    }
+
+    pub fn unresolvable_generic_argument(
+        identifier: &str,
+        source: &str,
+        token: &TokenRange,
+        definition_token: &TokenRange,
+    ) -> Self {
+        AnalyzerError::UnresolvableGenericArgument {
+            identifier: identifier.to_string(),
+            input: AnalyzerError::named_source(source, token),
+            error_location: token.into(),
+            definition_location: definition_token.into(),
         }
     }
 

@@ -2,8 +2,7 @@ use crate::symbol::{Symbol, SymbolId};
 use crate::symbol_path::SymbolPathNamespace;
 use crate::symbol_table;
 use bimap::BiMap;
-use daggy::petgraph::unionfind::UnionFind;
-use daggy::petgraph::visit::{EdgeRef, NodeIndexable};
+use daggy::petgraph::visit::Dfs;
 use daggy::{petgraph::algo, Dag, Walker};
 use std::{cell::RefCell, collections::HashMap, collections::HashSet};
 use veryl_parser::veryl_token::Token;
@@ -39,6 +38,7 @@ pub enum Context {
     Package,
     Modport,
     ExpressionIdentifier,
+    GenericInstance,
 }
 
 #[derive(Debug, Clone)]
@@ -142,46 +142,71 @@ impl TypeDag {
     }
 
     fn connected_components(&self) -> Vec<Vec<Symbol>> {
-        let graph = self.dag.graph();
-        let mut vertex_sets = UnionFind::new(graph.node_bound());
-        for edge in graph.edge_references() {
-            let (a, b) = (edge.source(), edge.target());
+        let mut ret = Vec::new();
+        let mut graph = self.dag.graph().clone();
 
-            // Ignore Index0 because it is root node
-            if a.index() != 0 {
-                vertex_sets.union(graph.to_index(a), graph.to_index(b));
+        // Reverse edge to traverse nodes which are called from parent node
+        graph.reverse();
+
+        for node in self.symbols.keys() {
+            let mut connected = Vec::new();
+            let mut dfs = Dfs::new(&graph, (*node).into());
+            while let Some(x) = dfs.next(&graph) {
+                let index = x.index() as u32;
+                if self.paths.contains_key(&index) {
+                    let symbol = self.get_symbol(index);
+                    connected.push(symbol);
+                }
+            }
+            if !connected.is_empty() {
+                ret.push(connected);
             }
         }
-        let labels = vertex_sets.into_labeling();
 
-        let mut ret = HashMap::new();
-        for node in graph.node_indices() {
-            let label = labels[graph.to_index(node)];
-            let index = node.index() as u32;
-
-            if self.paths.contains_key(&index) {
-                let sym = self.get_symbol(index);
-                ret.entry(label)
-                    .and_modify(|x: &mut Vec<_>| x.push(sym.clone()))
-                    .or_insert(vec![sym]);
-            }
-        }
-        ret.into_values().collect()
+        ret
     }
 
     fn dump(&self) -> String {
         let nodes = algo::toposort(self.dag.graph(), None).unwrap();
         let mut ret = "".to_string();
-        for node in nodes {
-            if let Some(path) = self.paths.get(&(node.index() as u32)) {
-                ret.push_str(&format!("{}\n", path.name));
+
+        let mut max_width = 0;
+        for node in &nodes {
+            let idx = node.index() as u32;
+            if let Some(path) = self.paths.get(&idx) {
+                max_width = max_width.max(path.name.len());
+                for parent in self.dag.parents(*node).iter(&self.dag) {
+                    let node = parent.1.index() as u32;
+                    if let Some(path) = self.paths.get(&node) {
+                        max_width = max_width.max(path.name.len() + 4);
+                    }
+                }
+            }
+        }
+
+        for node in &nodes {
+            let idx = node.index() as u32;
+            if let Some(path) = self.paths.get(&idx) {
+                let symbol = self.symbols.get(&idx).unwrap();
+                ret.push_str(&format!(
+                    "{}{} : {}\n",
+                    path.name,
+                    " ".repeat(max_width - path.name.len()),
+                    symbol.kind
+                ));
                 let mut set = HashSet::new();
-                for parent in self.dag.parents(node).iter(&self.dag) {
+                for parent in self.dag.parents(*node).iter(&self.dag) {
                     let node = parent.1.index() as u32;
                     if !set.contains(&node) {
                         set.insert(node);
                         if let Some(path) = self.paths.get(&node) {
-                            ret.push_str(&format!(" |- {}\n", path.name));
+                            let symbol = self.symbols.get(&node).unwrap();
+                            ret.push_str(&format!(
+                                " |- {}{} : {}\n",
+                                path.name,
+                                " ".repeat(max_width - path.name.len() - 4),
+                                symbol.kind
+                            ));
                         }
                     }
                 }

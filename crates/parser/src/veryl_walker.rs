@@ -887,6 +887,9 @@ pub trait VerylWalker {
     fn expression_identifier(&mut self, arg: &ExpressionIdentifier) {
         before!(self, expression_identifier, arg);
         self.scoped_identifier(&arg.scoped_identifier);
+        if let Some(ref x) = arg.expression_identifier_opt {
+            self.width(&x.width);
+        }
         for x in &arg.expression_identifier_list {
             self.select(&x.select);
         }
@@ -1099,6 +1102,12 @@ pub trait VerylWalker {
             Factor::OutsideExpression(x) => {
                 self.outside_expression(&x.outside_expression);
             }
+            Factor::TypeExpression(x) => {
+                self.type_expression(&x.type_expression);
+            }
+            Factor::FactorType(x) => {
+                self.factor_type(&x.factor_type);
+            }
         }
         after!(self, factor, arg);
     }
@@ -1271,15 +1280,10 @@ pub trait VerylWalker {
     /// Semantic action for non-terminal 'TypeExpression'
     fn type_expression(&mut self, arg: &TypeExpression) {
         before!(self, type_expression, arg);
-        match arg {
-            TypeExpression::ScalarType(x) => self.scalar_type(&x.scalar_type),
-            TypeExpression::TypeLParenExpressionRParen(x) => {
-                self.r#type(&x.r#type);
-                self.l_paren(&x.l_paren);
-                self.expression(&x.expression);
-                self.r_paren(&x.r_paren);
-            }
-        }
+        self.r#type(&arg.r#type);
+        self.l_paren(&arg.l_paren);
+        self.expression(&arg.expression);
+        self.r_paren(&arg.r_paren);
         after!(self, type_expression, arg);
     }
 
@@ -1427,9 +1431,15 @@ pub trait VerylWalker {
             VariableType::ResetSyncLow(x) => self.reset_sync_low(&x.reset_sync_low),
             VariableType::Logic(x) => self.logic(&x.logic),
             VariableType::Bit(x) => self.bit(&x.bit),
-            VariableType::ScopedIdentifier(x) => self.scoped_identifier(&x.scoped_identifier),
         };
         after!(self, variable_type, arg);
+    }
+
+    /// Semantic action for non-terminal 'UserDefinedType'
+    fn user_defined_type(&mut self, arg: &UserDefinedType) {
+        before!(self, user_defined_type, arg);
+        self.scoped_identifier(&arg.scoped_identifier);
+        after!(self, user_defined_type, arg);
     }
 
     /// Semantic action for non-terminal 'TypeModifier'
@@ -1442,6 +1452,21 @@ pub trait VerylWalker {
         after!(self, type_modifier, arg);
     }
 
+    /// Semantic action for non-terminal 'FactorType'
+    fn factor_type(&mut self, arg: &FactorType) {
+        before!(self, factor_type, arg);
+        match arg.factor_type_group.as_ref() {
+            FactorTypeGroup::VariableTypeFactorTypeOpt(x) => {
+                self.variable_type(&x.variable_type);
+                if let Some(ref x) = x.factor_type_opt {
+                    self.width(&x.width);
+                }
+            }
+            FactorTypeGroup::FixedType(x) => self.fixed_type(&x.fixed_type),
+        }
+        after!(self, factor_type, arg);
+    }
+
     /// Semantic action for non-terminal 'ScalarType'
     fn scalar_type(&mut self, arg: &ScalarType) {
         before!(self, scalar_type, arg);
@@ -1449,13 +1474,15 @@ pub trait VerylWalker {
             self.type_modifier(&x.type_modifier);
         }
         match &*arg.scalar_type_group {
-            ScalarTypeGroup::VariableTypeScalarTypeOpt(x) => {
-                self.variable_type(&x.variable_type);
+            ScalarTypeGroup::UserDefinedTypeScalarTypeOpt(x) => {
+                self.user_defined_type(&x.user_defined_type);
                 if let Some(ref x) = x.scalar_type_opt {
                     self.width(&x.width);
                 }
             }
-            ScalarTypeGroup::FixedType(x) => self.fixed_type(&x.fixed_type),
+            ScalarTypeGroup::FactorType(x) => {
+                self.factor_type(&x.factor_type);
+            }
         }
         after!(self, scalar_type, arg);
     }
@@ -1488,7 +1515,9 @@ pub trait VerylWalker {
             CastingType::ResetAsyncLow(x) => self.reset_async_low(&x.reset_async_low),
             CastingType::ResetSyncHigh(x) => self.reset_sync_high(&x.reset_sync_high),
             CastingType::ResetSyncLow(x) => self.reset_sync_low(&x.reset_sync_low),
-            CastingType::ScopedIdentifier(x) => self.scoped_identifier(&x.scoped_identifier),
+            CastingType::UserDefinedType(x) => self.user_defined_type(&x.user_defined_type),
+            CastingType::Based(x) => self.based(&x.based),
+            CastingType::BaseLess(x) => self.base_less(&x.base_less),
         }
         after!(self, casting_type, arg);
     }
@@ -1506,10 +1535,31 @@ pub trait VerylWalker {
         before!(self, statement_block, arg);
         self.l_brace(&arg.l_brace);
         for x in &arg.statement_block_list {
-            self.statement_block_item(&x.statement_block_item);
+            self.statement_block_group(&x.statement_block_group);
         }
         self.r_brace(&arg.r_brace);
         after!(self, statement_block, arg);
+    }
+
+    /// Semantic action for non-terminal 'StatementBlockGroup'
+    fn statement_block_group(&mut self, arg: &StatementBlockGroup) {
+        before!(self, statement_block_group, arg);
+        for x in &arg.statement_block_group_list {
+            self.attribute(&x.attribute);
+        }
+        match arg.statement_block_group_group.as_ref() {
+            StatementBlockGroupGroup::LBraceStatementBlockGroupGroupListRBrace(x) => {
+                self.l_brace(&x.l_brace);
+                for x in &x.statement_block_group_group_list {
+                    self.statement_block_group(&x.statement_block_group);
+                }
+                self.r_brace(&x.r_brace);
+            }
+            StatementBlockGroupGroup::StatementBlockItem(x) => {
+                self.statement_block_item(&x.statement_block_item);
+            }
+        }
+        after!(self, statement_block_group, arg);
     }
 
     /// Semantic action for non-terminal 'StatementOrVarDeclaration'
@@ -1809,17 +1859,15 @@ pub trait VerylWalker {
         self.identifier(&arg.identifier);
         self.colon(&arg.colon);
         match &*arg.const_declaration_group {
-            ConstDeclarationGroup::ArrayTypeEquExpression(x) => {
+            ConstDeclarationGroup::ArrayType(x) => {
                 self.array_type(&x.array_type);
-                self.equ(&x.equ);
-                self.expression(&x.expression);
             }
-            ConstDeclarationGroup::TypeEquTypeExpression(x) => {
+            ConstDeclarationGroup::Type(x) => {
                 self.r#type(&x.r#type);
-                self.equ(&x.equ);
-                self.type_expression(&x.type_expression);
             }
         }
+        self.equ(&arg.equ);
+        self.expression(&arg.expression);
         self.semicolon(&arg.semicolon);
         after!(self, const_declaration, arg);
     }
@@ -2262,17 +2310,15 @@ pub trait VerylWalker {
         self.identifier(&arg.identifier);
         self.colon(&arg.colon);
         match &*arg.with_parameter_item_group0 {
-            WithParameterItemGroup0::ArrayTypeEquExpression(x) => {
+            WithParameterItemGroup0::ArrayType(x) => {
                 self.array_type(&x.array_type);
-                self.equ(&x.equ);
-                self.expression(&x.expression);
             }
-            WithParameterItemGroup0::TypeEquTypeExpression(x) => {
+            WithParameterItemGroup0::Type(x) => {
                 self.r#type(&x.r#type);
-                self.equ(&x.equ);
-                self.type_expression(&x.type_expression);
             }
         }
+        self.equ(&arg.equ);
+        self.expression(&arg.expression);
         after!(self, with_parameter_item, arg);
     }
 
@@ -2438,6 +2484,10 @@ pub trait VerylWalker {
         }
         self.interface(&arg.interface);
         if let Some(ref x) = arg.port_type_abstract_opt0 {
+            self.colon_colon(&x.colon_colon);
+            self.identifier(&x.identifier);
+        }
+        if let Some(ref x) = arg.port_type_abstract_opt1 {
             self.array(&x.array);
         }
     }

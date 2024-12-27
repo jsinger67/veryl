@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use veryl_parser::resource_table::{self, StrId};
 use veryl_parser::veryl_grammar_trait as syntax_tree;
-use veryl_parser::veryl_token::{Token, TokenRange};
+use veryl_parser::veryl_token::{Token, TokenRange, TokenSource};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SymbolPath(pub Vec<StrId>);
@@ -269,6 +269,7 @@ impl GenericSymbol {
                 token.source,
             );
             let symbol = Symbol::new(&token, kind, &base.namespace, false, DocComment::default());
+
             Some((token, symbol))
         }
     }
@@ -358,6 +359,7 @@ impl GenericSymbolPath {
                 self.paths.clone_from(&x.paths);
                 self.paths.append(&mut paths);
                 self.kind = x.kind;
+                self.range = x.range;
                 break;
             }
         }
@@ -371,9 +373,55 @@ impl GenericSymbolPath {
                         arg.paths.clone_from(&x.paths);
                         arg.paths.append(&mut paths);
                         arg.kind = x.kind;
+                        arg.range = x.range;
                         break;
                     }
                 }
+            }
+        }
+    }
+
+    /// Resolve and expand path if the path is imported at declaration
+    pub fn resolve_imported(&mut self, namespace: &Namespace) {
+        if !self.is_resolvable() {
+            return;
+        }
+        if let Ok(symbol) = symbol_table::resolve((&self.generic_path(), namespace)) {
+            if symbol.imported {
+                let self_namespace = namespace_table::get(self.range.beg.id).unwrap();
+                let TokenSource::File(self_file_path) = self.range.beg.source else {
+                    return;
+                };
+                if let Ok(symbol) = symbol_table::resolve((&self.generic_path(), &self_namespace)) {
+                    let mut parent = symbol.found.namespace.clone();
+                    parent.strip_prefix(&namespace_table::get_default());
+
+                    if parent.depth() == 0 {
+                        return;
+                    }
+
+                    // If symbol belongs Package, it can be expanded
+                    if let Ok(parent_symbol) =
+                        symbol_table::resolve((&parent.paths, &self_namespace))
+                    {
+                        if matches!(parent_symbol.found.kind, SymbolKind::Package(_)) {
+                            for (i, path) in parent.paths.iter().enumerate() {
+                                let token = Token::generate(*path);
+                                namespace_table::insert(token.id, self_file_path, &self_namespace);
+                                let generic_symbol = GenericSymbol {
+                                    base: token,
+                                    arguments: vec![],
+                                };
+                                self.paths.insert(i, generic_symbol);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for path in &mut self.paths {
+            for arg in &mut path.arguments {
+                arg.resolve_imported(namespace);
             }
         }
     }

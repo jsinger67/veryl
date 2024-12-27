@@ -1,12 +1,14 @@
-use crate::aligner::{Aligner, Location};
 use std::fs;
 use std::path::Path;
-use veryl_analyzer::attribute::EnumEncodingItem;
+use veryl_aligner::{align_kind, Aligner, Location};
+use veryl_analyzer::attribute::Attribute as Attr;
+use veryl_analyzer::attribute::{CondTypeItem, EnumEncodingItem};
+use veryl_analyzer::attribute_table;
 use veryl_analyzer::evaluator::{Evaluated, Evaluator};
 use veryl_analyzer::namespace::Namespace;
 use veryl_analyzer::symbol::TypeModifier as SymTypeModifier;
 use veryl_analyzer::symbol::{
-    GenericMap, Symbol, SymbolId, SymbolKind, TypeKind, VariableAffiniation,
+    GenericMap, Symbol, SymbolId, SymbolKind, TypeKind, VariableAffiliation,
 };
 use veryl_analyzer::symbol_path::{GenericSymbolPath, SymbolPath};
 use veryl_analyzer::symbol_table;
@@ -30,7 +32,14 @@ pub enum AttributeType {
     Test,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Mode {
+    Emit,
+    Align,
+}
+
 pub struct Emitter {
+    mode: Mode,
     project_name: Option<StrId>,
     build_opt: Build,
     format_opt: Format,
@@ -48,6 +57,8 @@ pub struct Emitter {
     in_always_ff: bool,
     in_direction_modport: bool,
     in_import: bool,
+    in_scalar_type: bool,
+    in_expression: Vec<()>,
     signed: bool,
     default_clock: Option<SymbolId>,
     default_reset: Option<SymbolId>,
@@ -65,6 +76,7 @@ pub struct Emitter {
 impl Default for Emitter {
     fn default() -> Self {
         Self {
+            mode: Mode::Emit,
             project_name: None,
             build_opt: Build::default(),
             format_opt: Format::default(),
@@ -82,6 +94,8 @@ impl Default for Emitter {
             in_always_ff: false,
             in_direction_modport: false,
             in_import: false,
+            in_scalar_type: false,
+            in_expression: Vec::new(),
             signed: false,
             default_clock: None,
             default_reset: None,
@@ -100,16 +114,13 @@ impl Default for Emitter {
 
 impl Emitter {
     pub fn new(metadata: &Metadata, src_path: &Path, dst_path: &Path, map_path: &Path) -> Self {
-        let mut aligner = Aligner::new();
-        aligner.set_metadata(metadata);
-
         let source_map = SourceMap::new(src_path, dst_path, map_path);
 
         Self {
             project_name: Some(metadata.project.name.as_str().into()),
             build_opt: metadata.build.clone(),
             format_opt: metadata.format.clone(),
-            aligner,
+            aligner: Aligner::new(),
             source_map: Some(source_map),
             ..Default::default()
         }
@@ -117,7 +128,11 @@ impl Emitter {
 
     pub fn emit(&mut self, project_name: &str, input: &Veryl) {
         namespace_table::set_default(&[project_name.into()]);
-        self.aligner.align(input);
+        self.mode = Mode::Align;
+        self.veryl(input);
+        self.aligner.finish_group();
+        self.aligner.gather_additions();
+        self.mode = Mode::Emit;
         self.veryl(input);
     }
 
@@ -130,18 +145,29 @@ impl Emitter {
     }
 
     fn str(&mut self, x: &str) {
-        self.string.push_str(x);
+        match self.mode {
+            Mode::Emit => {
+                self.string.push_str(x);
 
-        let new_lines = x.matches('\n').count() as u32;
-        self.dst_line += new_lines;
-        if new_lines == 0 {
-            self.dst_column += x.len() as u32;
-        } else {
-            self.dst_column = (x.len() - x.rfind('\n').unwrap_or(0)) as u32;
+                let new_lines = x.matches('\n').count() as u32;
+                self.dst_line += new_lines;
+                if new_lines == 0 {
+                    self.dst_column += x.len() as u32;
+                } else {
+                    self.dst_column = (x.len() - x.rfind('\n').unwrap_or(0)) as u32;
+                }
+            }
+            Mode::Align => {
+                self.aligner.space(x.len());
+            }
         }
     }
 
     fn truncate(&mut self, x: usize) {
+        if self.mode == Mode::Align {
+            return;
+        }
+
         let removed = self.string.split_off(x);
 
         let removed_lines = removed.matches('\n').count() as u32;
@@ -154,6 +180,10 @@ impl Emitter {
     }
 
     fn unindent(&mut self) {
+        if self.mode == Mode::Align {
+            return;
+        }
+
         let indent_width =
             self.indent * self.format_opt.indent_width + self.case_item_indent.unwrap_or(0);
         if self.string.ends_with(&" ".repeat(indent_width)) {
@@ -162,12 +192,20 @@ impl Emitter {
     }
 
     fn indent(&mut self) {
+        if self.mode == Mode::Align {
+            return;
+        }
+
         let indent_width =
             self.indent * self.format_opt.indent_width + self.case_item_indent.unwrap_or(0);
         self.str(&" ".repeat(indent_width));
     }
 
     fn newline_push(&mut self) {
+        if self.mode == Mode::Align {
+            return;
+        }
+
         self.unindent();
         if !self.consumed_next_newline {
             self.str(NEWLINE);
@@ -180,6 +218,10 @@ impl Emitter {
     }
 
     fn newline_pop(&mut self) {
+        if self.mode == Mode::Align {
+            return;
+        }
+
         self.unindent();
         if !self.consumed_next_newline {
             self.str(NEWLINE);
@@ -192,6 +234,10 @@ impl Emitter {
     }
 
     fn newline(&mut self) {
+        if self.mode == Mode::Align {
+            return;
+        }
+
         self.unindent();
         if !self.consumed_next_newline {
             self.str(NEWLINE);
@@ -255,44 +301,51 @@ impl Emitter {
     }
 
     fn process_token(&mut self, x: &VerylToken, will_push: bool, duplicated: Option<usize>) {
-        self.push_token(&x.token);
+        match self.mode {
+            Mode::Emit => {
+                self.push_token(&x.token);
 
-        let mut loc: Location = x.token.into();
-        loc.duplicated = duplicated;
-        if let Some(width) = self.aligner.additions.get(&loc) {
-            self.space(*width as usize);
-        }
+                let mut loc: Location = x.token.into();
+                loc.duplicated = duplicated;
+                if let Some(width) = self.aligner.additions.get(&loc) {
+                    self.space(*width as usize);
+                }
 
-        // skip to emit comments
-        if duplicated.is_some() || self.build_opt.strip_comments {
-            return;
-        }
+                // skip to emit comments
+                if duplicated.is_some() || self.build_opt.strip_comments {
+                    return;
+                }
 
-        // temporary indent to adjust indent of comments with the next push
-        if will_push {
-            self.indent += 1;
-        }
-        // detect line comment newline which will consume the next newline
-        self.consumed_next_newline = false;
-        for x in &x.comments {
-            // insert space between comments in the same line
-            if x.line == self.src_line && !self.in_start_token {
-                self.space(1);
+                // temporary indent to adjust indent of comments with the next push
+                if will_push {
+                    self.indent += 1;
+                }
+                // detect line comment newline which will consume the next newline
+                self.consumed_next_newline = false;
+                for x in &x.comments {
+                    // insert space between comments in the same line
+                    if x.line == self.src_line && !self.in_start_token {
+                        self.space(1);
+                    }
+                    for _ in 0..x.line - self.src_line {
+                        self.unindent();
+                        self.str(NEWLINE);
+                        self.indent();
+                    }
+                    self.push_token(x);
+                }
+                if will_push {
+                    self.indent -= 1;
+                }
+                if self.consumed_next_newline {
+                    self.unindent();
+                    self.str(NEWLINE);
+                    self.indent();
+                }
             }
-            for _ in 0..x.line - self.src_line {
-                self.unindent();
-                self.str(NEWLINE);
-                self.indent();
+            Mode::Align => {
+                self.aligner.token(x);
             }
-            self.push_token(x);
-        }
-        if will_push {
-            self.indent -= 1;
-        }
-        if self.consumed_next_newline {
-            self.unindent();
-            self.str(NEWLINE);
-            self.indent();
         }
     }
 
@@ -305,36 +358,75 @@ impl Emitter {
     }
 
     fn duplicated_token(&mut self, x: &VerylToken, i: usize) {
-        self.process_token(x, false, Some(i))
+        if self.mode == Mode::Emit {
+            self.process_token(x, false, Some(i))
+        }
+    }
+
+    fn align_start(&mut self, kind: usize) {
+        if self.mode == Mode::Align {
+            self.aligner.aligns[kind].start_item();
+        }
+    }
+
+    fn align_finish(&mut self, kind: usize) {
+        if self.mode == Mode::Align {
+            self.aligner.aligns[kind].finish_item();
+        }
+    }
+
+    fn align_last_location(&mut self, kind: usize) -> Option<Location> {
+        self.aligner.aligns[kind].last_location
+    }
+
+    fn align_dummy_location(&mut self, kind: usize, loc: Option<Location>) {
+        if self.mode == Mode::Align {
+            self.aligner.aligns[kind].dummy_location(loc.unwrap());
+        }
+    }
+
+    fn align_duplicated_token(&mut self, kind: usize, x: &VerylToken, i: usize) {
+        if self.mode == Mode::Align {
+            self.aligner.aligns[kind].duplicated_token(x, i);
+        }
     }
 
     fn case_inside_statement(&mut self, arg: &CaseStatement) {
-        self.case(&arg.case);
+        let (prefix, force_last_item_default) = self.cond_type_prefix(&arg.case.case_token.token);
+        self.token(&arg.case.case_token.append(&prefix, &None));
         self.space(1);
         self.str("(");
         self.expression(&arg.expression);
         self.token_will_push(&arg.l_brace.l_brace_token.replace(") inside"));
+        let len = arg.case_statement_list.len();
         for (i, x) in arg.case_statement_list.iter().enumerate() {
+            let force_default = force_last_item_default & (i == (len - 1));
             self.newline_list(i);
-            self.case_inside_item(&x.case_item);
+            self.case_inside_item(&x.case_item, force_default);
         }
         self.newline_list_post(arg.case_statement_list.is_empty());
         self.token(&arg.r_brace.r_brace_token.replace("endcase"));
     }
 
-    fn case_inside_item(&mut self, arg: &CaseItem) {
+    fn case_inside_item(&mut self, arg: &CaseItem, force_default: bool) {
         let start = self.dst_column;
+        self.align_start(align_kind::EXPRESSION);
         match &*arg.case_item_group {
             CaseItemGroup::CaseCondition(x) => {
-                self.range_item(&x.case_condition.range_item);
-                for x in &x.case_condition.case_condition_list {
-                    self.comma(&x.comma);
-                    self.space(1);
-                    self.range_item(&x.range_item);
+                if force_default {
+                    self.str("default");
+                } else {
+                    self.range_item(&x.case_condition.range_item);
+                    for x in &x.case_condition.case_condition_list {
+                        self.comma(&x.comma);
+                        self.space(1);
+                        self.range_item(&x.range_item);
+                    }
                 }
             }
             CaseItemGroup::Defaul(x) => self.defaul(&x.defaul),
         }
+        self.align_finish(align_kind::EXPRESSION);
         self.colon(&arg.colon);
         self.space(1);
         match arg.case_item_group0.as_ref() {
@@ -348,32 +440,41 @@ impl Emitter {
     }
 
     fn case_expaneded_statement(&mut self, arg: &CaseStatement) {
-        self.case(&arg.case);
+        let (prefix, force_last_item_default) = self.cond_type_prefix(&arg.case.case_token.token);
+        self.token(&arg.case.case_token.append(&prefix, &None));
         self.space(1);
         self.str("(");
         self.str("1'b1");
         self.token_will_push(&arg.l_brace.l_brace_token.replace(")"));
+        let len = arg.case_statement_list.len();
         for (i, x) in arg.case_statement_list.iter().enumerate() {
+            let force_default = force_last_item_default & (i == (len - 1));
             self.newline_list(i);
-            self.case_expanded_item(&arg.expression, &x.case_item);
+            self.case_expanded_item(&arg.expression, &x.case_item, force_default);
         }
         self.newline_list_post(arg.case_statement_list.is_empty());
         self.token(&arg.r_brace.r_brace_token.replace("endcase"));
     }
 
-    fn case_expanded_item(&mut self, lhs: &Expression, item: &CaseItem) {
+    fn case_expanded_item(&mut self, lhs: &Expression, item: &CaseItem, force_default: bool) {
         let start: u32 = self.dst_column;
+        self.align_start(align_kind::EXPRESSION);
         match &*item.case_item_group {
             CaseItemGroup::CaseCondition(x) => {
-                self.inside_element_operation(lhs, &x.case_condition.range_item);
-                for x in &x.case_condition.case_condition_list {
-                    self.comma(&x.comma);
-                    self.space(1);
-                    self.inside_element_operation(lhs, &x.range_item);
+                if force_default {
+                    self.str("default");
+                } else {
+                    self.inside_element_operation(lhs, &x.case_condition.range_item);
+                    for x in &x.case_condition.case_condition_list {
+                        self.comma(&x.comma);
+                        self.space(1);
+                        self.inside_element_operation(lhs, &x.range_item);
+                    }
                 }
             }
             CaseItemGroup::Defaul(x) => self.defaul(&x.defaul),
         }
+        self.align_finish(align_kind::EXPRESSION);
         self.colon(&item.colon);
         self.space(1);
         match item.case_item_group0.as_ref() {
@@ -511,11 +612,11 @@ impl Emitter {
 
     fn always_ff_if_reset_exists(&mut self, arg: &AlwaysFfDeclaration) -> bool {
         if let Some(x) = arg.statement_block.statement_block_list.first() {
-            match &*x.statement_block_item {
-                StatementBlockItem::Statement(x) => {
-                    matches!(*x.statement, Statement::IfResetStatement(_))
-                }
-                _ => false,
+            let x: Vec<_> = x.statement_block_group.as_ref().into();
+            if let Some(StatementBlockItem::Statement(x)) = x.first() {
+                matches!(*x.statement, Statement::IfResetStatement(_))
+            } else {
+                false
             }
         } else {
             false
@@ -655,27 +756,29 @@ impl Emitter {
 
     fn emit_statement_block(&mut self, arg: &StatementBlock, begin_kw: &str, end_kw: &str) {
         self.token_will_push(&arg.l_brace.l_brace_token.replace(begin_kw));
-        let mut base = 0;
-        for (i, x) in arg
+
+        let statement_block_list: Vec<_> = arg
             .statement_block_list
             .iter()
-            .filter(|x| {
-                is_var_declaration(&x.statement_block_item)
-                    || is_let_statement(&x.statement_block_item)
-            })
+            .flat_map(|x| Into::<Vec<StatementBlockItem>>::into(x.statement_block_group.as_ref()))
+            .collect();
+
+        let mut base = 0;
+        for (i, x) in statement_block_list
+            .iter()
+            .filter(|x| is_var_declaration(x) || is_let_statement(x))
             .enumerate()
         {
             self.newline_list(i);
-            base += self.statement_variable_declatation_only(&x.statement_block_item);
+            base += self.statement_variable_declatation_only(x);
         }
-        for (i, x) in arg
-            .statement_block_list
+        for (i, x) in statement_block_list
             .iter()
-            .filter(|x| !is_var_declaration(&x.statement_block_item))
+            .filter(|x| !is_var_declaration(x))
             .enumerate()
         {
             self.newline_list(base + i);
-            match &*x.statement_block_item {
+            match &x {
                 StatementBlockItem::LetStatement(x) => self.let_statement(&x.let_statement),
                 StatementBlockItem::Statement(x) => self.statement(&x.statement),
                 _ => unreachable!(),
@@ -705,6 +808,32 @@ impl Emitter {
                 1
             }
             _ => 0,
+        }
+    }
+
+    fn cond_type_prefix(&self, token: &Token) -> (Option<String>, bool) {
+        fn prefix(token: &Token) -> Option<String> {
+            let mut attrs = attribute_table::get(token);
+            attrs.reverse();
+            for attr in attrs {
+                match attr {
+                    Attr::CondType(CondTypeItem::None) => {
+                        return None;
+                    }
+                    Attr::CondType(x) => {
+                        return Some(format!("{} ", x));
+                    }
+                    _ => (),
+                }
+            }
+            None
+        }
+
+        let prefix = prefix(token);
+        if self.build_opt.emit_cond_type {
+            (prefix, false)
+        } else {
+            (None, prefix.is_some())
         }
     }
 }
@@ -961,6 +1090,7 @@ impl VerylWalker for Emitter {
     fn scoped_identifier(&mut self, arg: &ScopedIdentifier) {
         let namespace = namespace_table::get(arg.identifier().token.id).unwrap();
         let mut path: GenericSymbolPath = arg.into();
+        path.resolve_imported(&namespace);
 
         for i in 0..path.len() {
             let base_path = path.base_path(i);
@@ -1008,6 +1138,7 @@ impl VerylWalker for Emitter {
     // https://github.com/rust-lang/rust/issues/106211
     #[inline(never)]
     fn expression(&mut self, arg: &Expression) {
+        self.in_expression.push(());
         self.expression01(&arg.expression01);
         for x in &arg.expression_list {
             self.space(1);
@@ -1015,6 +1146,7 @@ impl VerylWalker for Emitter {
             self.space(1);
             self.expression01(&x.expression01);
         }
+        self.in_expression.pop();
     }
 
     /// Semantic action for non-terminal 'Expression01'
@@ -1157,8 +1289,16 @@ impl VerylWalker for Emitter {
                     self.f64(&x.f64);
                     self.str("'(");
                 }
-                CastingType::ScopedIdentifier(x) => {
-                    self.scoped_identifier(&x.scoped_identifier);
+                CastingType::UserDefinedType(x) => {
+                    self.user_defined_type(&x.user_defined_type);
+                    self.str("'(");
+                }
+                CastingType::Based(x) => {
+                    self.based(&x.based);
+                    self.str("'(");
+                }
+                CastingType::BaseLess(x) => {
+                    self.base_less(&x.base_less);
                     self.str("'(");
                 }
                 // casting to clock type doesn't change polarity
@@ -1218,9 +1358,11 @@ impl VerylWalker for Emitter {
                 | CastingType::U64(_)
                 | CastingType::I32(_)
                 | CastingType::I64(_) => self.str("))"),
-                CastingType::F32(_) | CastingType::F64(_) | CastingType::ScopedIdentifier(_) => {
-                    self.str(")")
-                }
+                CastingType::F32(_)
+                | CastingType::F64(_)
+                | CastingType::UserDefinedType(_)
+                | CastingType::Based(_)
+                | CastingType::BaseLess(_) => self.str(")"),
                 _ => (),
             }
         }
@@ -1545,26 +1687,79 @@ impl VerylWalker for Emitter {
         }
     }
 
-    /// Semantic action for non-terminal 'ScalarType'
-    fn scalar_type(&mut self, arg: &ScalarType) {
-        for x in &arg.scalar_type_list {
-            self.type_modifier(&x.type_modifier);
-        }
-        match &*arg.scalar_type_group {
-            ScalarTypeGroup::VariableTypeScalarTypeOpt(x) => {
+    /// Semantic action for non-terminal 'FactorType'
+    fn factor_type(&mut self, arg: &FactorType) {
+        match arg.factor_type_group.as_ref() {
+            FactorTypeGroup::VariableTypeFactorTypeOpt(x) => {
                 self.variable_type(&x.variable_type);
                 if self.signed {
                     self.space(1);
                     self.str("signed");
                 }
+                if self.in_scalar_type {
+                    self.align_finish(align_kind::TYPE);
+                    self.align_start(align_kind::WIDTH);
+                }
+                if let Some(ref x) = x.factor_type_opt {
+                    self.space(1);
+                    self.width(&x.width);
+                } else if self.in_scalar_type {
+                    let loc = self.align_last_location(align_kind::TYPE);
+                    self.align_dummy_location(align_kind::WIDTH, loc);
+                }
+            }
+            FactorTypeGroup::FixedType(x) => {
+                self.fixed_type(&x.fixed_type);
+                if self.in_scalar_type {
+                    self.align_finish(align_kind::TYPE);
+                    self.align_start(align_kind::WIDTH);
+                    let loc = self.align_last_location(align_kind::TYPE);
+                    self.align_dummy_location(align_kind::WIDTH, loc);
+                }
+            }
+        }
+    }
+
+    /// Semantic action for non-terminal 'ScalarType'
+    fn scalar_type(&mut self, arg: &ScalarType) {
+        self.in_scalar_type = true;
+
+        // disable align in Expression
+        if self.mode == Mode::Align && !self.in_expression.is_empty() {
+            self.in_scalar_type = false;
+            return;
+        }
+
+        self.align_start(align_kind::TYPE);
+        if self.mode == Mode::Align {
+            // dummy space for implicit type
+            self.space(1);
+        }
+        for x in &arg.scalar_type_list {
+            self.type_modifier(&x.type_modifier);
+        }
+        match &*arg.scalar_type_group {
+            ScalarTypeGroup::UserDefinedTypeScalarTypeOpt(x) => {
+                self.user_defined_type(&x.user_defined_type);
+                if self.signed {
+                    self.space(1);
+                    self.str("signed");
+                }
+                self.align_finish(align_kind::TYPE);
+                self.align_start(align_kind::WIDTH);
                 if let Some(ref x) = x.scalar_type_opt {
                     self.space(1);
                     self.width(&x.width);
+                } else {
+                    let loc = self.align_last_location(align_kind::TYPE);
+                    self.align_dummy_location(align_kind::WIDTH, loc);
                 }
             }
-            ScalarTypeGroup::FixedType(x) => self.fixed_type(&x.fixed_type),
+            ScalarTypeGroup::FactorType(x) => self.factor_type(&x.factor_type),
         }
         self.signed = false;
+        self.in_scalar_type = false;
+        self.align_finish(align_kind::WIDTH);
     }
 
     /// Semantic action for non-terminal 'StatementBlock'
@@ -1584,7 +1779,9 @@ impl VerylWalker for Emitter {
         //}
         //self.str(";");
         //self.newline();
+        self.align_start(align_kind::IDENTIFIER);
         self.str(&arg.identifier.identifier_token.to_string());
+        self.align_finish(align_kind::IDENTIFIER);
         self.space(1);
         self.equ(&arg.equ);
         self.space(1);
@@ -1594,8 +1791,10 @@ impl VerylWalker for Emitter {
 
     /// Semantic action for non-terminal 'IdentifierStatement'
     fn identifier_statement(&mut self, arg: &IdentifierStatement) {
+        self.align_start(align_kind::IDENTIFIER);
         self.expression_identifier(&arg.expression_identifier);
         self.assignment_lefthand_side = Some(*arg.expression_identifier.clone());
+        self.align_finish(align_kind::IDENTIFIER);
         match &*arg.identifier_statement_group {
             IdentifierStatementGroup::FunctionCall(x) => {
                 self.function_call(&x.function_call);
@@ -1615,8 +1814,8 @@ impl VerylWalker for Emitter {
             if let Ok(lhs_symbol) = symbol_table::resolve(lhs.scoped_identifier.as_ref()) {
                 match lhs_symbol.found.kind {
                     SymbolKind::Variable(x) => !matches!(
-                        x.affiniation,
-                        VariableAffiniation::StatementBlock | VariableAffiniation::Function
+                        x.affiliation,
+                        VariableAffiliation::StatementBlock | VariableAffiliation::Function
                     ),
                     _ => true,
                 }
@@ -1629,9 +1828,13 @@ impl VerylWalker for Emitter {
 
         self.space(1);
         if is_nba {
+            self.align_start(align_kind::ASSIGNMENT);
             self.str("<");
             match &*arg.assignment_group {
-                AssignmentGroup::Equ(x) => self.equ(&x.equ),
+                AssignmentGroup::Equ(x) => {
+                    self.equ(&x.equ);
+                    self.align_finish(align_kind::ASSIGNMENT);
+                }
                 AssignmentGroup::AssignmentOperator(x) => {
                     let token = format!(
                         "{}",
@@ -1639,7 +1842,8 @@ impl VerylWalker for Emitter {
                     );
                     // remove trailing `=` from assignment operator
                     let token = &token[0..token.len() - 1];
-                    self.str("=");
+                    self.token(&x.assignment_operator.assignment_operator_token.replace("="));
+                    self.align_finish(align_kind::ASSIGNMENT);
                     self.space(1);
                     let identifier = self.assignment_lefthand_side.take().unwrap();
                     self.expression_identifier(&identifier);
@@ -1656,12 +1860,14 @@ impl VerylWalker for Emitter {
                 self.expression(&arg.expression);
             }
         } else {
+            self.align_start(align_kind::ASSIGNMENT);
             match &*arg.assignment_group {
                 AssignmentGroup::Equ(x) => self.equ(&x.equ),
                 AssignmentGroup::AssignmentOperator(x) => {
                     self.assignment_operator(&x.assignment_operator)
                 }
             }
+            self.align_finish(align_kind::ASSIGNMENT);
             self.space(1);
             self.expression(&arg.expression);
         }
@@ -1669,23 +1875,33 @@ impl VerylWalker for Emitter {
 
     /// Semantic action for non-terminal 'IfStatement'
     fn if_statement(&mut self, arg: &IfStatement) {
-        self.r#if(&arg.r#if);
+        let (prefix, force_last_item_default) = self.cond_type_prefix(&arg.r#if.if_token.token);
+        self.token(&arg.r#if.if_token.append(&prefix, &None));
         self.space(1);
         self.str("(");
         self.expression(&arg.expression);
         self.str(")");
         self.space(1);
         self.statement_block(&arg.statement_block);
-        for x in &arg.if_statement_list {
-            self.space(1);
-            self.r#else(&x.r#else);
-            self.space(1);
-            self.r#if(&x.r#if);
-            self.space(1);
-            self.str("(");
-            self.expression(&x.expression);
-            self.str(")");
-            self.space(1);
+        let len = arg.if_statement_list.len();
+        for (i, x) in arg.if_statement_list.iter().enumerate() {
+            let force_default =
+                force_last_item_default & (i == (len - 1)) & arg.if_statement_opt.is_none();
+            if force_default {
+                self.space(1);
+                self.str("else");
+                self.space(1);
+            } else {
+                self.space(1);
+                self.r#else(&x.r#else);
+                self.space(1);
+                self.r#if(&x.r#if);
+                self.space(1);
+                self.str("(");
+                self.expression(&x.expression);
+                self.str(")");
+                self.space(1);
+            }
             self.statement_block(&x.statement_block);
         }
         if let Some(ref x) = arg.if_statement_opt {
@@ -1698,7 +1914,14 @@ impl VerylWalker for Emitter {
 
     /// Semantic action for non-terminal 'IfResetStatement'
     fn if_reset_statement(&mut self, arg: &IfResetStatement) {
-        self.token(&arg.if_reset.if_reset_token.replace("if"));
+        let (prefix, force_last_item_default) =
+            self.cond_type_prefix(&arg.if_reset.if_reset_token.token);
+        self.token(
+            &arg.if_reset
+                .if_reset_token
+                .replace("if")
+                .append(&prefix, &None),
+        );
         self.space(1);
         self.str("(");
         let reset_signal = self.reset_signal.clone().unwrap();
@@ -1706,16 +1929,25 @@ impl VerylWalker for Emitter {
         self.str(")");
         self.space(1);
         self.statement_block(&arg.statement_block);
-        for x in &arg.if_reset_statement_list {
-            self.space(1);
-            self.r#else(&x.r#else);
-            self.space(1);
-            self.r#if(&x.r#if);
-            self.space(1);
-            self.str("(");
-            self.expression(&x.expression);
-            self.str(")");
-            self.space(1);
+        let len = arg.if_reset_statement_list.len();
+        for (i, x) in arg.if_reset_statement_list.iter().enumerate() {
+            let force_default =
+                force_last_item_default & (i == (len - 1)) & arg.if_reset_statement_opt.is_none();
+            if force_default {
+                self.space(1);
+                self.str("else");
+                self.space(1);
+            } else {
+                self.space(1);
+                self.r#else(&x.r#else);
+                self.space(1);
+                self.r#if(&x.r#if);
+                self.space(1);
+                self.str("(");
+                self.expression(&x.expression);
+                self.str(")");
+                self.space(1);
+            }
             self.statement_block(&x.statement_block);
         }
         if let Some(ref x) = arg.if_reset_statement_opt {
@@ -1812,6 +2044,7 @@ impl VerylWalker for Emitter {
     /// Semantic action for non-terminal 'SwitchItem'
     fn switch_item(&mut self, arg: &SwitchItem) {
         let start = self.dst_column;
+        self.align_start(align_kind::EXPRESSION);
         match &*arg.switch_item_group {
             SwitchItemGroup::SwitchCondition(x) => {
                 self.expression(&x.switch_condition.expression);
@@ -1823,6 +2056,7 @@ impl VerylWalker for Emitter {
             }
             SwitchItemGroup::Defaul(x) => self.defaul(&x.defaul),
         }
+        self.align_finish(align_kind::EXPRESSION);
         self.colon(&arg.colon);
         self.space(1);
         self.case_item_indent = Some((self.dst_column - start) as usize);
@@ -1931,11 +2165,18 @@ impl VerylWalker for Emitter {
 
         self.scalar_type(&arg.array_type.scalar_type);
         self.space(1);
+        self.align_start(align_kind::IDENTIFIER);
         self.identifier(&arg.identifier);
+        self.align_finish(align_kind::IDENTIFIER);
+        self.align_start(align_kind::ARRAY);
         if let Some(ref x) = arg.array_type.array_type_opt {
             self.space(1);
             self.array(&x.array);
+        } else {
+            let loc = self.align_last_location(align_kind::IDENTIFIER);
+            self.align_dummy_location(align_kind::ARRAY, loc);
         }
+        self.align_finish(align_kind::ARRAY);
         self.str(";");
         self.newline();
         if is_tri {
@@ -1956,11 +2197,18 @@ impl VerylWalker for Emitter {
     fn var_declaration(&mut self, arg: &VarDeclaration) {
         self.scalar_type(&arg.array_type.scalar_type);
         self.space(1);
+        self.align_start(align_kind::IDENTIFIER);
         self.identifier(&arg.identifier);
+        self.align_finish(align_kind::IDENTIFIER);
+        self.align_start(align_kind::ARRAY);
         if let Some(ref x) = arg.array_type.array_type_opt {
             self.space(1);
             self.array(&x.array);
+        } else {
+            let loc = self.align_last_location(align_kind::IDENTIFIER);
+            self.align_dummy_location(align_kind::ARRAY, loc);
         }
+        self.align_finish(align_kind::ARRAY);
         self.semicolon(&arg.semicolon);
     }
 
@@ -1969,33 +2217,52 @@ impl VerylWalker for Emitter {
         self.r#const(&arg.r#const);
         self.space(1);
         match &*arg.const_declaration_group {
-            ConstDeclarationGroup::ArrayTypeEquExpression(x) => {
+            ConstDeclarationGroup::ArrayType(x) => {
                 if !self.is_implicit_scalar_type(&x.array_type.scalar_type) {
                     self.scalar_type(&x.array_type.scalar_type);
                     self.space(1);
+                } else {
+                    self.align_start(align_kind::TYPE);
+                    self.align_dummy_location(
+                        align_kind::TYPE,
+                        Some(arg.r#const.const_token.token.into()),
+                    );
+                    self.align_finish(align_kind::TYPE);
                 }
+                self.align_start(align_kind::IDENTIFIER);
                 self.identifier(&arg.identifier);
+                self.align_finish(align_kind::IDENTIFIER);
+                self.align_start(align_kind::ARRAY);
                 if let Some(ref x) = x.array_type.array_type_opt {
                     self.space(1);
                     self.array(&x.array);
+                } else {
+                    let loc = self.align_last_location(align_kind::IDENTIFIER);
+                    self.align_dummy_location(align_kind::ARRAY, loc);
                 }
-                self.space(1);
-                self.equ(&x.equ);
-                self.space(1);
-                self.expression(&x.expression);
+                self.align_finish(align_kind::ARRAY);
             }
-            ConstDeclarationGroup::TypeEquTypeExpression(x) => {
+            ConstDeclarationGroup::Type(x) => {
+                self.align_start(align_kind::TYPE);
                 if !self.is_implicit_type() {
                     self.r#type(&x.r#type);
                     self.space(1);
+                } else {
+                    self.align_dummy_location(
+                        align_kind::TYPE,
+                        Some(arg.r#const.const_token.token.into()),
+                    );
                 }
+                self.align_finish(align_kind::TYPE);
+                self.align_start(align_kind::IDENTIFIER);
                 self.identifier(&arg.identifier);
-                self.space(1);
-                self.equ(&x.equ);
-                self.space(1);
-                self.type_expression(&x.type_expression);
+                self.align_finish(align_kind::IDENTIFIER);
             }
         }
+        self.space(1);
+        self.equ(&arg.equ);
+        self.space(1);
+        self.expression(&arg.expression);
         self.semicolon(&arg.semicolon);
     }
 
@@ -2005,11 +2272,14 @@ impl VerylWalker for Emitter {
         self.space(1);
         self.scalar_type(&arg.array_type.scalar_type);
         self.space(1);
+        self.align_start(align_kind::IDENTIFIER);
         self.identifier(&arg.identifier);
-
+        self.align_finish(align_kind::IDENTIFIER);
         if let Some(ato) = &arg.array_type.array_type_opt {
             self.space(1);
+            self.align_start(align_kind::ARRAY);
             self.array(&ato.array);
+            self.align_finish(align_kind::ARRAY);
         }
         self.semicolon(&arg.semicolon);
     }
@@ -2152,7 +2422,9 @@ impl VerylWalker for Emitter {
             self.token(&arg.assign.assign_token.replace("always_comb"));
         }
         self.space(1);
+        self.align_start(align_kind::IDENTIFIER);
         self.hierarchical_identifier(&arg.hierarchical_identifier);
+        self.align_finish(align_kind::IDENTIFIER);
         self.space(1);
         self.equ(&arg.equ);
         self.space(1);
@@ -2207,7 +2479,9 @@ impl VerylWalker for Emitter {
     fn modport_item(&mut self, arg: &ModportItem) {
         self.direction(&arg.direction);
         self.space(1);
+        self.align_start(align_kind::IDENTIFIER);
         self.identifier(&arg.identifier);
+        self.align_finish(align_kind::IDENTIFIER);
     }
 
     /// Semantic action for non-terminal 'EnumDeclaration'
@@ -2380,7 +2654,9 @@ impl VerylWalker for Emitter {
     fn struct_union_item(&mut self, arg: &StructUnionItem) {
         self.scalar_type(&arg.scalar_type);
         self.space(1);
+        self.align_start(align_kind::IDENTIFIER);
         self.identifier(&arg.identifier);
+        self.align_finish(align_kind::IDENTIFIER);
     }
 
     /// Semantic action for non-terminal 'InitialDeclaration'
@@ -2399,17 +2675,24 @@ impl VerylWalker for Emitter {
 
     /// Semantic action for non-terminal 'InstDeclaration'
     fn inst_declaration(&mut self, arg: &InstDeclaration) {
-        if arg.inst_declaration_opt1.is_none() {
-            self.single_line = true;
-        }
+        self.single_line = arg.inst_declaration_opt1.is_none();
         self.token(&arg.inst.inst_token.replace(""));
         self.scoped_identifier(&arg.scoped_identifier);
         self.space(1);
         if let Some(ref x) = arg.inst_declaration_opt0 {
-            self.inst_parameter(&x.inst_parameter);
+            // skip align at single line
+            if self.mode == Mode::Emit || !self.single_line {
+                self.inst_parameter(&x.inst_parameter);
+            }
             self.space(1);
         }
+        if self.single_line {
+            self.align_start(align_kind::IDENTIFIER);
+        }
         self.identifier(&arg.identifier);
+        if self.single_line {
+            self.align_finish(align_kind::IDENTIFIER);
+        }
         if let Some(ref x) = arg.inst_declaration_opt {
             self.space(1);
             self.array(&x.array);
@@ -2486,14 +2769,25 @@ impl VerylWalker for Emitter {
     /// Semantic action for non-terminal 'InstParameterItem'
     fn inst_parameter_item(&mut self, arg: &InstParameterItem) {
         self.str(".");
+        self.align_start(align_kind::IDENTIFIER);
         self.identifier(&arg.identifier);
+        self.align_finish(align_kind::IDENTIFIER);
         self.space(1);
         self.str("(");
         if let Some(ref x) = arg.inst_parameter_item_opt {
             self.token(&x.colon.colon_token.replace(""));
+            self.align_start(align_kind::EXPRESSION);
             self.expression(&x.expression);
+            self.align_finish(align_kind::EXPRESSION);
         } else {
+            self.align_start(align_kind::EXPRESSION);
+            self.align_duplicated_token(
+                align_kind::EXPRESSION,
+                &arg.identifier.identifier_token,
+                0,
+            );
             self.duplicated_token(&arg.identifier.identifier_token, 0);
+            self.align_finish(align_kind::EXPRESSION);
         }
         self.str(")");
     }
@@ -2530,16 +2824,20 @@ impl VerylWalker for Emitter {
     /// Semantic action for non-terminal 'InstPortItem'
     fn inst_port_item(&mut self, arg: &InstPortItem) {
         self.str(".");
+        self.align_start(align_kind::IDENTIFIER);
         self.identifier(&arg.identifier);
+        self.align_finish(align_kind::IDENTIFIER);
         self.space(1);
         self.str("(");
         if let Some(ref x) = arg.inst_port_item_opt {
             self.token(&x.colon.colon_token.replace(""));
+            self.align_start(align_kind::EXPRESSION);
             let mut stringifier = Stringifier::new();
             stringifier.expression(&x.expression);
             if stringifier.as_str() != "_" {
                 self.expression(&x.expression);
             }
+            self.align_finish(align_kind::EXPRESSION);
         } else {
             let (prefix, suffix) = if let Ok(found) = symbol_table::resolve(arg.identifier.as_ref())
             {
@@ -2552,7 +2850,10 @@ impl VerylWalker for Emitter {
                 unreachable!()
             };
             let token = identifier_with_prefix_suffix(&arg.identifier, &prefix, &suffix);
+            self.align_start(align_kind::EXPRESSION);
+            self.align_duplicated_token(align_kind::EXPRESSION, &token, 0);
             self.duplicated_token(&token, 0);
+            self.align_finish(align_kind::EXPRESSION);
         }
         self.str(")");
     }
@@ -2606,39 +2907,58 @@ impl VerylWalker for Emitter {
 
     /// Semantic action for non-terminal 'WithParameterItem'
     fn with_parameter_item(&mut self, arg: &WithParameterItem) {
+        self.align_start(align_kind::PARAMETER);
         match &*arg.with_parameter_item_group {
             WithParameterItemGroup::Param(x) => self.param(&x.param),
             WithParameterItemGroup::Const(x) => self.r#const(&x.r#const),
         };
+        self.align_finish(align_kind::PARAMETER);
         self.space(1);
         match &*arg.with_parameter_item_group0 {
-            WithParameterItemGroup0::ArrayTypeEquExpression(x) => {
+            WithParameterItemGroup0::ArrayType(x) => {
                 if !self.is_implicit_scalar_type(&x.array_type.scalar_type) {
                     self.scalar_type(&x.array_type.scalar_type);
                     self.space(1);
+                } else {
+                    self.align_start(align_kind::TYPE);
+                    let loc = self.align_last_location(align_kind::PARAMETER);
+                    self.align_dummy_location(align_kind::TYPE, loc);
+                    self.align_finish(align_kind::TYPE);
                 }
+                self.align_start(align_kind::IDENTIFIER);
                 self.identifier(&arg.identifier);
+                self.align_finish(align_kind::IDENTIFIER);
+                self.align_start(align_kind::ARRAY);
                 if let Some(ref x) = x.array_type.array_type_opt {
                     self.space(1);
                     self.array(&x.array);
+                } else {
+                    let loc = self.align_last_location(align_kind::IDENTIFIER);
+                    self.align_dummy_location(align_kind::ARRAY, loc);
                 }
-                self.space(1);
-                self.equ(&x.equ);
-                self.space(1);
-                self.expression(&x.expression);
+                self.align_finish(align_kind::ARRAY);
             }
-            WithParameterItemGroup0::TypeEquTypeExpression(x) => {
+            WithParameterItemGroup0::Type(x) => {
+                self.align_start(align_kind::TYPE);
                 if !self.is_implicit_type() {
                     self.r#type(&x.r#type);
                     self.space(1);
+                } else {
+                    let loc = self.align_last_location(align_kind::PARAMETER);
+                    self.align_dummy_location(align_kind::TYPE, loc);
                 }
+                self.align_finish(align_kind::TYPE);
+                self.align_start(align_kind::IDENTIFIER);
                 self.identifier(&arg.identifier);
-                self.space(1);
-                self.equ(&x.equ);
-                self.space(1);
-                self.type_expression(&x.type_expression);
+                self.align_finish(align_kind::IDENTIFIER);
             }
         }
+        self.space(1);
+        self.equ(&arg.equ);
+        self.space(1);
+        self.align_start(align_kind::EXPRESSION);
+        self.expression(&arg.expression);
+        self.align_finish(align_kind::EXPRESSION);
     }
 
     /// Semantic action for non-terminal 'PortDeclaration'
@@ -2699,28 +3019,49 @@ impl VerylWalker for Emitter {
                 }
                 self.scalar_type(&x.array_type.scalar_type);
                 self.space(1);
+                self.align_start(align_kind::IDENTIFIER);
                 self.identifier(&arg.identifier);
+                self.align_finish(align_kind::IDENTIFIER);
+                self.align_start(align_kind::ARRAY);
                 if let Some(ref x) = x.array_type.array_type_opt {
                     self.space(1);
                     self.array(&x.array);
+                } else {
+                    let loc = self.align_last_location(align_kind::IDENTIFIER);
+                    self.align_dummy_location(align_kind::ARRAY, loc);
                 }
+                self.align_finish(align_kind::ARRAY);
                 self.in_direction_modport = false;
             }
             PortDeclarationItemGroup::PortTypeAbstract(x) => {
                 let x = x.port_type_abstract.as_ref();
                 self.interface(&x.interface);
-                self.space(1);
-                self.identifier(&arg.identifier);
                 if let Some(ref x) = x.port_type_abstract_opt0 {
+                    self.str(".");
+                    self.identifier(&x.identifier);
+                }
+                self.space(1);
+                self.align_start(align_kind::IDENTIFIER);
+                self.identifier(&arg.identifier);
+                self.align_finish(align_kind::IDENTIFIER);
+                self.align_start(align_kind::ARRAY);
+                if let Some(ref x) = x.port_type_abstract_opt1 {
                     self.space(1);
                     self.array(&x.array);
+                } else {
+                    let loc = self.align_last_location(align_kind::IDENTIFIER);
+                    self.align_dummy_location(align_kind::ARRAY, loc);
                 }
+                self.align_finish(align_kind::ARRAY);
             }
         }
     }
 
     /// Semantic action for non-terminal 'Direction'
     fn direction(&mut self, arg: &Direction) {
+        if !matches!(arg, Direction::Modport(_)) {
+            self.align_start(align_kind::DIRECTION);
+        }
         match arg {
             Direction::Input(x) => self.input(&x.input),
             Direction::Output(x) => self.output(&x.output),
@@ -2729,6 +3070,9 @@ impl VerylWalker for Emitter {
             Direction::Modport(_) => (),
             Direction::Import(x) => self.import(&x.import),
         };
+        if !matches!(arg, Direction::Modport(_)) {
+            self.align_finish(align_kind::DIRECTION);
+        }
     }
 
     /// Semantic action for non-terminal 'FunctionDeclaration'
@@ -2746,7 +3090,7 @@ impl VerylWalker for Emitter {
             self.space(1);
             self.str("automatic");
             self.space(1);
-            if let Some(ref x) = &arg.function_declaration_opt1 {
+            if let Some(ref x) = arg.function_declaration_opt1 {
                 self.scalar_type(&x.scalar_type);
             } else {
                 self.str("void");
@@ -3229,40 +3573,50 @@ impl VerylWalker for Emitter {
 
     /// Semantic action for non-terminal 'Veryl'
     fn veryl(&mut self, arg: &Veryl) {
-        self.in_start_token = true;
-        self.start(&arg.start);
-        self.in_start_token = false;
-        if !arg.start.start_token.comments.is_empty() {
-            self.newline();
-        }
-        for x in &arg.veryl_list {
-            let items: Vec<DescriptionItem> = x.description_group.as_ref().into();
-            for item in items {
-                if let DescriptionItem::ImportDeclaration(x) = item {
-                    let mut emitter = Emitter {
-                        project_name: self.project_name,
-                        build_opt: self.build_opt.clone(),
-                        format_opt: self.format_opt.clone(),
-                        ..Default::default()
-                    };
-                    emitter.import_declaration(&x.import_declaration);
-                    self.file_scope_import.push(emitter.as_str().to_string());
+        match self.mode {
+            Mode::Emit => {
+                self.in_start_token = true;
+                self.start(&arg.start);
+                self.in_start_token = false;
+                if !arg.start.start_token.comments.is_empty() {
+                    self.newline();
+                }
+                for x in &arg.veryl_list {
+                    let items: Vec<DescriptionItem> = x.description_group.as_ref().into();
+                    for item in items {
+                        if let DescriptionItem::ImportDeclaration(x) = item {
+                            let mut emitter = Emitter {
+                                project_name: self.project_name,
+                                build_opt: self.build_opt.clone(),
+                                format_opt: self.format_opt.clone(),
+                                ..Default::default()
+                            };
+                            emitter.import_declaration(&x.import_declaration);
+                            self.file_scope_import.push(emitter.as_str().to_string());
+                        }
+                    }
+                }
+                for (i, x) in arg.veryl_list.iter().enumerate() {
+                    if i != 0 {
+                        self.newline();
+                    }
+                    self.description_group(&x.description_group);
+                }
+                self.newline();
+
+                // build map and insert link to map
+                if self.build_opt.sourcemap_target != SourceMapTarget::None {
+                    self.source_map.as_mut().unwrap().build();
+                    self.str(&self.source_map.as_ref().unwrap().get_link());
+                    self.newline();
                 }
             }
-        }
-        for (i, x) in arg.veryl_list.iter().enumerate() {
-            if i != 0 {
-                self.newline();
+            Mode::Align => {
+                self.start(&arg.start);
+                for x in &arg.veryl_list {
+                    self.description_group(&x.description_group);
+                }
             }
-            self.description_group(&x.description_group);
-        }
-        self.newline();
-
-        // build map and insert link to map
-        if self.build_opt.sourcemap_target != SourceMapTarget::None {
-            self.source_map.as_mut().unwrap().build();
-            self.str(&self.source_map.as_ref().unwrap().get_link());
-            self.newline();
         }
     }
 }
@@ -3319,7 +3673,13 @@ fn namespace_string(namespace: &Namespace, context: &SymbolContext) -> String {
             if let Ok(ref symbol) = symbol_table::resolve((&symbol_path, &resolve_namespace)) {
                 let separator = match symbol.found.kind {
                     SymbolKind::Package(_) => "::",
-                    SymbolKind::GenericInstance(_) => "::",
+                    SymbolKind::GenericInstance(ref x) => {
+                        let symbol = symbol_table::get(x.base).unwrap();
+                        match symbol.kind {
+                            SymbolKind::Interface(_) => ".",
+                            _ => "::",
+                        }
+                    }
                     SymbolKind::Interface(_) => ".",
                     _ if in_sv_namespace => "::",
                     _ => "_",

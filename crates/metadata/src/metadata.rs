@@ -8,7 +8,7 @@ use crate::project::Project;
 use crate::pubfile::{Pubfile, Release};
 use crate::publish::Publish;
 use crate::test::Test;
-use crate::{FilelistType, MetadataError};
+use crate::{FilelistType, MetadataError, SourceMapTarget};
 use log::{debug, info};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -17,11 +17,12 @@ use serde::{Deserialize, Serialize};
 use spdx::Expression;
 use std::collections::HashMap;
 use std::env;
+use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use url::Url;
-use veryl_path::PathPair;
+use veryl_path::PathSet;
 
 #[derive(Clone, Copy, Debug)]
 pub enum BumpKind {
@@ -47,7 +48,7 @@ pub struct Metadata {
     #[serde(default)]
     pub test: Test,
     #[serde(default)]
-    pub dependencies: HashMap<Url, Dependency>,
+    pub dependencies: HashMap<UrlPath, Dependency>,
     #[serde(skip)]
     pub metadata_path: PathBuf,
     #[serde(skip)]
@@ -58,6 +59,25 @@ pub struct Metadata {
     pub lockfile_path: PathBuf,
     #[serde(skip)]
     pub lockfile: Lockfile,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(untagged)]
+pub enum UrlPath {
+    Url(Url),
+    Path(PathBuf),
+}
+
+impl fmt::Display for UrlPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UrlPath::Url(x) => x.fmt(f),
+            UrlPath::Path(x) => {
+                let text = x.to_string_lossy();
+                text.fmt(f)
+            }
+        }
+    }
 }
 
 static VALID_PROJECT_NAME: Lazy<Regex> =
@@ -201,7 +221,7 @@ impl Metadata {
 
     pub fn update_lockfile(&mut self) -> Result<(), MetadataError> {
         let modified = if self.lockfile_path.exists() {
-            let mut lockfile = Lockfile::load(&self.lockfile_path)?;
+            let mut lockfile = Lockfile::load(self)?;
             let modified = lockfile.update(self, false)?;
             self.lockfile = lockfile;
             modified
@@ -219,7 +239,7 @@ impl Metadata {
         &mut self,
         files: &[T],
         symlink: bool,
-    ) -> Result<Vec<PathPair>, MetadataError> {
+    ) -> Result<Vec<PathSet>, MetadataError> {
         let base = self.project_path();
 
         let src_files = if files.is_empty() {
@@ -243,10 +263,22 @@ impl Metadata {
                     PathBuf::from("target").join(src.with_extension("sv").file_name().unwrap()),
                 ),
             };
-            ret.push(PathPair {
+            let map = match &self.build.sourcemap_target {
+                SourceMapTarget::Directory { ref path } => {
+                    let dst = dst.strip_prefix(&base).unwrap();
+                    base.join(path.join(dst.with_extension("sv.map")))
+                }
+                _ => {
+                    let mut map = dst.clone();
+                    map.set_extension("sv.map");
+                    map
+                }
+            };
+            ret.push(PathSet {
                 prj: self.project.name.clone(),
                 src: src.to_path_buf(),
                 dst,
+                map,
             });
         }
 
@@ -296,6 +328,10 @@ version = "0.1.0""###
         };
 
         self.metadata_path.with_file_name(filelist_name)
+    }
+
+    pub fn doc_path(&self) -> PathBuf {
+        self.metadata_path.parent().unwrap().join(&self.doc.path)
     }
 }
 

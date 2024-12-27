@@ -2,7 +2,7 @@
 
 [![Actions Status](https://github.com/veryl-lang/veryl/workflows/Regression/badge.svg)](https://github.com/veryl-lang/veryl/actions)
 [![Crates.io](https://img.shields.io/crates/v/veryl.svg)](https://crates.io/crates/veryl)
-[![Changelog](https://img.shields.io/badge/changelog-v0.13.1-green.svg)](https://github.com/veryl-lang/veryl/blob/master/CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/changelog-v0.13.3-green.svg)](https://github.com/veryl-lang/veryl/blob/master/CHANGELOG.md)
 
 Veryl is a modern hardware description language.
 
@@ -27,6 +27,7 @@ If you have any idea, please open [Issue](https://github.com/veryl-lang/veryl/is
 * [Example](#example)
 * [FAQ](#faq)
 * [Installation & Usage](#installation--usage)
+* [Publications](#plublications)
 * [License](#license)
 * [Contribution](#contribution)
 
@@ -123,7 +124,7 @@ endmodule
 
 ### Why not SystemVerilog?
 
-SystemVerilog is very complicated language, and it causes difficulty of implementing EDA tools for it. 
+SystemVerilog is very complicated language, and it causes difficulty of implementing EDA tools for it.
 As a consequence, major EDA tools only support SystemVerilog subset which is different each other,
 and users must explore usable languege features which are covered by adopted tools.
 Additionally, the difficulty prevents productivity improvement by developing support tools.
@@ -155,6 +156,15 @@ Therefore syntax features which introduce large complexity in exchange for sligh
 ## Installation & Usage
 
 See [Getting Started](https://doc.veryl-lang.org/book/03_getting_started.html).
+
+## Publications
+
+* Naoya Hatta, Taichi Ishitani, Ryota Shioya.
+  Veryl: A New Hardware Description Language as an Alternative to SystemVerilog.
+  August 2024. In: The Design & Verification Conference (DVCon) Japan 2024.
+  [[Paper]](https://veryl-lang.org/docs/veryl_dvcon-jpn-2024.pdf)
+  [[Slides]](https://veryl-lang.org/docs/veryl_dvcon-jpn-2024-slide.pdf)
+  [[arXiv]](http://arxiv.org/abs/2411.12983)
 
 ## License
 

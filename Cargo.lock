@@ -46,6 +46,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aligned-vec"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e0966165eaf052580bd70eb1b32cb3d6245774c0104d1b2793e9650bf83b52a"
+dependencies = [
+ "equator",
+]
+
+[[package]]
 name = "allocator-api2"
 version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -441,9 +450,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.20"
+version = "4.5.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b97f376d85a664d5837dbae44bf546e6477a679ff6610010f17276f686d867e8"
+checksum = "3135e7ec2ef7b10c6ed8950f0f792ed96ee093fa088608f1c76e569722700c84"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -451,9 +460,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.20"
+version = "4.5.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19bc80abd44e4bed93ca373a0704ccbd1b710dc5749406201bb018272808dc54"
+checksum = "30582fc632330df2bd26877bde0c1f4470d57c582bbc070376afcd04d8cb4838"
 dependencies = [
  "anstream",
  "anstyle",
@@ -485,9 +494,9 @@ dependencies = [
 
 [[package]]
 name = "clap_lex"
-version = "0.7.2"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1462739cb27611015575c0c11df5df7601141071f07518d56fcc1be504cbec97"
+checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "clru"
@@ -986,15 +995,35 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.11.5"
+version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e13fa619b91fb2381732789fc5de83b45675e882f66623b7d8cb4f643017018d"
+checksum = "dcaee3d8e3cfc3fd92428d477bc97fc29ec8716d180c0d74c643bb26166660e0"
 dependencies = [
  "anstream",
  "anstyle",
  "env_filter",
  "humantime",
  "log",
+]
+
+[[package]]
+name = "equator"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c35da53b5a021d2484a7cc49b2ac7f2d840f8236a286f84202369bd338d761ea"
+dependencies = [
+ "equator-macro",
+]
+
+[[package]]
+name = "equator-macro"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bf679796c0322556351f287a51b49e48f7c4986e727b5dd78c972d30e2e16cc"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1005,12 +1034,12 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "errno"
-version = "0.3.9"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "534c5cf6194dfab3db3242765c03bbe257cf92f22b38f6bc0c58d59108a820ba"
+checksum = "33d852cb9b869c2a9b3df2f71a3074817f01e1844f839a144f5fcef059a4eb5d"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1051,9 +1080,9 @@ checksum = "e8c02a5121d4ea3eb16a80748c74f5549a5665e4c21333c6098f283870fbdea6"
 
 [[package]]
 name = "fern"
-version = "0.6.2"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9f0c14694cbd524c8720dd69b0e3179344f04ebb5f90f2e4a440c6ea3b2f1ee"
+checksum = "4316185f709b23713e41e3195f90edef7fb00c3ed4adc79769cf09cc762a3b29"
 dependencies = [
  "log",
 ]
@@ -1115,9 +1144,9 @@ dependencies = [
 
 [[package]]
 name = "fs4"
-version = "0.10.0"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec6fcfb3c0c1d71612528825042261419d5dade9678c39a781e05b63677d9b32"
+checksum = "e871a4cfa68bb224863b53149d973df1ac8d1ed2fa1d1bfc37ac1bb65dd37207"
 dependencies = [
  "rustix",
  "windows-sys 0.52.0",
@@ -1909,25 +1938,12 @@ dependencies = [
 
 [[package]]
 name = "handlebars"
-version = "5.1.2"
+version = "6.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d08485b96a0e6393e9e4d1b8d48cf74ad6c063cd905eb33f42c1ce3f0377539b"
+checksum = "fd4ccde012831f9a071a637b0d4e31df31c0f6c525784b35ae76a9ac6bc1e315"
 dependencies = [
  "log",
- "pest",
- "pest_derive",
- "serde",
- "serde_json",
- "thiserror 1.0.64",
-]
-
-[[package]]
-name = "handlebars"
-version = "6.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce25b617d1375ef96eeb920ae717e3da34a02fc979fe632c75128350f9e1f74a"
-dependencies = [
- "log",
+ "num-order",
  "pest",
  "pest_derive",
  "serde",
@@ -2468,9 +2484,9 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libc"
-version = "0.2.159"
+version = "0.2.169"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "561d97a539a36e26a9a5fad1ea11a3039a67714694aaa379433e580854bc3dc5"
+checksum = "b5aba8db14291edd000dfcc4d620c7ebfb122c613afb886ca8803fa4e128a20a"
 
 [[package]]
 name = "libdbus-sys"
@@ -2618,9 +2634,9 @@ dependencies = [
 
 [[package]]
 name = "mdbook"
-version = "0.4.40"
+version = "0.4.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b45a38e19bd200220ef07c892b0157ad3d2365e5b5a267ca01ad12182491eea5"
+checksum = "fe1f98b8d66e537d2f0ba06e7dec4f44001deec539a2d18bfc102d6a86189148"
 dependencies = [
  "ammonia",
  "anyhow",
@@ -2630,7 +2646,7 @@ dependencies = [
  "elasticlunr-rs",
  "env_logger",
  "futures-util",
- "handlebars 5.1.2",
+ "handlebars",
  "ignore",
  "log",
  "memchr",
@@ -2654,13 +2670,13 @@ dependencies = [
 
 [[package]]
 name = "mdbook-veryl"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
  "anyhow",
  "clap",
  "line-col",
  "mdbook",
- "pulldown-cmark 0.12.1",
+ "pulldown-cmark 0.12.2",
  "regex",
  "semver 1.0.23",
  "serde_json",
@@ -2930,6 +2946,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-modular"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17bb261bf36fa7d83f4c294f834e91256769097b3cb505d44831e0a179ac647f"
+
+[[package]]
+name = "num-order"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "537b596b97c40fcf8056d153049eb22f481c17ebce72a513ec9286e4986d1bb6"
+dependencies = [
+ "num-modular",
+]
+
+[[package]]
 name = "num-rational"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3052,6 +3083,8 @@ dependencies = [
 [[package]]
 name = "parol"
 version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ebef4c48831763a4ec8e4d426e16e8b6cd3b7418850df4f6f42eed158229079"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3087,10 +3120,14 @@ dependencies = [
 [[package]]
 name = "parol-macros"
 version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54ec451836679aaa55158b454b441e21446a111ea34aa1917eba29245bafe4b8"
 
 [[package]]
 name = "parol_runtime"
 version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7acf241497c57046ab138688f5eef5d5c48f78c32dbf6289b58c9f1164e0b49f"
 dependencies = [
  "anyhow",
  "codespan-reporting",
@@ -3311,10 +3348,11 @@ checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
 
 [[package]]
 name = "pprof"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef5c97c51bd34c7e742402e216abdeb44d415fbe6ae41d56b114723e953711cb"
+checksum = "ebbe2f8898beba44815fdc9e5a4ae9c929e21c5dc29b0c774a15555f7f58d6d0"
 dependencies = [
+ "aligned-vec",
  "backtrace",
  "cfg-if",
  "findshlibs",
@@ -3406,9 +3444,9 @@ dependencies = [
 
 [[package]]
 name = "pulldown-cmark"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "666f0f59e259aea2d72e6012290c09877a780935cc3c18b1ceded41f3890d59c"
+checksum = "f86ba2052aebccc42cbbb3ed234b8b13ce76f75c3551a303cb2bcffcff12bb14"
 dependencies = [
  "bitflags 2.6.0",
  "getopts",
@@ -3547,9 +3585,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.11.0"
+version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38200e5ee88914975b69f657f0801b6f6dccafd44fd9326302a4aaeecfacb1d8"
+checksum = "b544ef1b4eac5dc2db33ea63606ae9ffcfac26c1416a2806ae0bf5f56b201191"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -3731,15 +3769,15 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.37"
+version = "0.38.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8acb788b847c24f28525660c4d7758620a7210875711f79e7f663cc152726811"
+checksum = "f93dc38ecbab2eb790ff964bb77fa94faf256fd3e73285fd7ba0903b76bedb85"
 dependencies = [
  "bitflags 2.6.0",
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3797,7 +3835,8 @@ dependencies = [
 [[package]]
 name = "scnr"
 version = "0.6.0"
-source = "git+https://github.com/jsinger67/scnr?branch=main#0d02fa0f221ef9cb1be66029b847513105cdb64c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ece72a2c58c0f2b9f11db70a2448f430ed4ef89578f68593226189bedb1ede4"
 dependencies = [
  "dot-writer",
  "log",
@@ -4044,9 +4083,9 @@ dependencies = [
 
 [[package]]
 name = "sourcemap"
-version = "9.0.0"
+version = "9.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dab08a862c70980b8e23698b507e272317ae52a608a164a844111f5372374f1f"
+checksum = "27c4ea7042fd1a155ad95335b5d505ab00d5124ea0332a06c8390d200bb1a76a"
 dependencies = [
  "base64-simd",
  "bitvec",
@@ -4063,9 +4102,9 @@ dependencies = [
 
 [[package]]
 name = "spdx"
-version = "0.10.6"
+version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47317bbaf63785b53861e1ae2d11b80d6b624211d42cb20efcd210ee6f8a14bc"
+checksum = "bae30cc7bfe3656d60ee99bf6836f472b0c53dddcbf335e253329abb16e535a2"
 dependencies = [
  "smallvec",
 ]
@@ -4195,19 +4234,19 @@ checksum = "2047c6ded9c721764247e62cd3b03c09ffc529b2ba5b10ec482ae507a4a70160"
 
 [[package]]
 name = "syntree"
-version = "0.14.5"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8a019a25d9135e907319cd33f02eeed4633388deea3a723b9242d062fa09486"
+checksum = "00c99c9cda412afe293a6b962af651b4594161ba88c1affe7ef66459ea040a06"
 
 [[package]]
 name = "syntree_layout"
-version = "0.2.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c4dcc044568a0f9708c87b9dd79f1d8e5fb2086a831ead7ef044c9a48bd756b"
+checksum = "24d027955f5f14d526450b6a11ef5aa962761e924dcd092298dd0d1466570565"
 dependencies = [
  "anyhow",
  "syntree",
- "thiserror 1.0.64",
+ "thiserror 2.0.3",
  "xml_writer",
 ]
 
@@ -4240,9 +4279,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tempfile"
-version = "3.13.0"
+version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0f2c9fc62d0beef6951ccffd757e241266a2c833136efbe35af6cd2567dca5b"
+checksum = "28cce251fcbc87fac86a866eeb0d6c2d536fc16d06f184bb61aeae11aa4cee0c"
 dependencies = [
  "cfg-if",
  "fastrand 2.1.1",
@@ -4408,9 +4447,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.40.0"
+version = "1.42.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2b070231665d27ad9ec9b8df639893f46727666c6767db40317fbe920a5d998"
+checksum = "5cec9b21b0450273377fc97bd4c33a8acffc8c996c987a7c5b319a0083707551"
 dependencies = [
  "backtrace",
  "bytes",
@@ -4772,9 +4811,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.10.0"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81dfa00651efa65069b0b6b651f4aaa31ba9e3c3ce0137aaad053604ee7e0314"
+checksum = "f8c5f0a0af699448548ad1a2fbf920fb4bee257eae39953ba95cb84891a0446a"
 dependencies = [
  "serde",
  "sha1_smol",
@@ -4788,7 +4827,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "veryl"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
  "anstyle",
  "clap",
@@ -4796,12 +4835,12 @@ dependencies = [
  "console",
  "fern",
  "futures",
- "handlebars 6.1.0",
+ "handlebars",
  "log",
  "mdbook",
  "miette",
  "once_cell",
- "pulldown-cmark 0.12.1",
+ "pulldown-cmark 0.12.2",
  "regex",
  "serde",
  "serde_json",
@@ -4820,8 +4859,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "veryl-aligner"
+version = "0.13.3"
+dependencies = [
+ "veryl-parser",
+]
+
+[[package]]
 name = "veryl-analyzer"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
  "bimap",
  "daggy",
@@ -4836,11 +4882,12 @@ dependencies = [
 
 [[package]]
 name = "veryl-emitter"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
  "serde",
  "strnum_bitwidth",
  "toml 0.8.19",
+ "veryl-aligner",
  "veryl-analyzer",
  "veryl-metadata",
  "veryl-parser",
@@ -4849,15 +4896,16 @@ dependencies = [
 
 [[package]]
 name = "veryl-formatter"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
+ "veryl-aligner",
  "veryl-metadata",
  "veryl-parser",
 ]
 
 [[package]]
 name = "veryl-ls"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
  "async-channel",
  "dashmap 6.1.0",
@@ -4877,7 +4925,7 @@ dependencies = [
 
 [[package]]
 name = "veryl-metadata"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
  "git-repository",
  "log",
@@ -4900,7 +4948,7 @@ dependencies = [
 
 [[package]]
 name = "veryl-parser"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
  "anyhow",
  "bimap",
@@ -4915,7 +4963,7 @@ dependencies = [
 
 [[package]]
 name = "veryl-path"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
  "directories",
  "fs4",
@@ -4927,7 +4975,7 @@ dependencies = [
 
 [[package]]
 name = "veryl-sourcemap"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
  "miette",
  "relative-path",
@@ -4937,7 +4985,7 @@ dependencies = [
 
 [[package]]
 name = "veryl-std"
-version = "0.13.1"
+version = "0.13.3"
 dependencies = [
  "merkle_hash",
  "miette",
@@ -4952,6 +5000,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "pprof",
+ "veryl",
  "veryl-analyzer",
  "veryl-emitter",
  "veryl-formatter",
