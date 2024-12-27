@@ -1,5 +1,7 @@
 pub use crate::generated::veryl_grammar_trait::*;
+use crate::veryl_token::is_anonymous_token;
 use paste::paste;
+use std::fmt;
 
 macro_rules! list_group_to_item {
     ($x:ident) => {
@@ -123,3 +125,113 @@ group_to_item!(Generate);
 group_to_item!(Package);
 group_to_item!(Description);
 group_to_item!(StatementBlock);
+
+pub fn is_anonymous_expression(arg: &Expression) -> bool {
+    if !arg.expression_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*arg.expression01;
+    if !exp.expression01_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*exp.expression02;
+    if !exp.expression02_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*exp.expression03;
+    if !exp.expression03_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*exp.expression04;
+    if !exp.expression04_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*exp.expression05;
+    if !exp.expression05_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*exp.expression06;
+    if !exp.expression06_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*exp.expression07;
+    if !exp.expression07_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*exp.expression08;
+    if !exp.expression08_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*exp.expression09;
+    if !exp.expression09_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*exp.expression10;
+    if !exp.expression10_list.is_empty() {
+        return false;
+    }
+
+    let exp = &*exp.expression11;
+    if exp.expression11_opt.is_some() {
+        return false;
+    }
+
+    let exp = &*exp.expression12;
+    if !exp.expression12_list.is_empty() {
+        return false;
+    }
+
+    match &*exp.factor {
+        Factor::IdentifierFactor(x) => {
+            let factor = &x.identifier_factor;
+
+            if factor.identifier_factor_opt.is_some() {
+                return false;
+            }
+
+            let exp_identifier = &*factor.expression_identifier;
+            if exp_identifier.expression_identifier_opt.is_some() {
+                return false;
+            }
+            if !exp_identifier.expression_identifier_list.is_empty() {
+                return false;
+            }
+            if !exp_identifier.expression_identifier_list0.is_empty() {
+                return false;
+            }
+
+            let scoped_identifier = &*exp_identifier.scoped_identifier;
+            if !scoped_identifier.scoped_identifier_list.is_empty() {
+                return false;
+            }
+
+            let token = scoped_identifier.identifier().token;
+            is_anonymous_token(&token)
+        }
+        _ => false,
+    }
+}
+
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let token = match self {
+            Direction::Input(x) => &x.input.input_token,
+            Direction::Output(x) => &x.output.output_token,
+            Direction::Inout(x) => &x.inout.inout_token,
+            Direction::Ref(x) => &x.r#ref.ref_token,
+            Direction::Modport(x) => &x.modport.modport_token,
+            Direction::Import(x) => &x.import.import_token,
+        };
+        token.fmt(f)
+    }
+}

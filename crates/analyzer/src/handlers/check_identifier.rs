@@ -3,7 +3,7 @@ use crate::symbol::Direction as SymDirection;
 use crate::symbol_table::is_sv_keyword;
 use veryl_metadata::{Case, Lint};
 use veryl_parser::veryl_grammar_trait::*;
-use veryl_parser::veryl_token::Token;
+use veryl_parser::veryl_token::{is_anonymous_token, Token};
 use veryl_parser::veryl_walker::{Handler, HandlerPoint};
 use veryl_parser::ParolError;
 
@@ -185,6 +185,13 @@ impl<'a> CheckIdentifier<'a> {
 
         let identifier = token.to_string();
 
+        if !matches!(kind, Kind::ClockDomain) && is_anonymous_token(token) {
+            self.errors.push(AnalyzerError::anonymous_identifier_usage(
+                self.text,
+                &token.into(),
+            ));
+        }
+
         if identifier.starts_with("__") {
             self.errors.push(AnalyzerError::reserved_identifier(
                 &identifier,
@@ -280,13 +287,13 @@ impl<'a> CheckIdentifier<'a> {
     }
 }
 
-impl<'a> Handler for CheckIdentifier<'a> {
+impl Handler for CheckIdentifier<'_> {
     fn set_point(&mut self, p: HandlerPoint) {
         self.point = p;
     }
 }
 
-impl<'a> VerylGrammarTrait for CheckIdentifier<'a> {
+impl VerylGrammarTrait for CheckIdentifier<'_> {
     fn clock_domain(&mut self, arg: &ClockDomain) -> Result<(), ParolError> {
         if let HandlerPoint::Before = self.point {
             self.check(&arg.identifier.identifier_token.token, Kind::ClockDomain);

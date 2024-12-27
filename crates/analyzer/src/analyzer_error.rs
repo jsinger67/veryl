@@ -4,6 +4,15 @@ use veryl_parser::veryl_token::TokenRange;
 
 #[derive(Error, Diagnostic, Debug)]
 pub enum AnalyzerError {
+    #[diagnostic(severity(Error), code(anonymous_identifier_usage), help(""), url(""))]
+    #[error("Anonymous identifier can't be placed at here")]
+    AnonymousIdentifierUsage {
+        #[source_code]
+        input: NamedSource<String>,
+        #[label("Error location")]
+        error_location: SourceSpan,
+    },
+
     #[diagnostic(
         severity(Error),
         code(call_non_function),
@@ -288,6 +297,17 @@ pub enum AnalyzerError {
     #[error("#{identifier} is not a function")]
     InvalidModportFunctionItem {
         identifier: String,
+        #[source_code]
+        input: NamedSource<String>,
+        #[label("Error location")]
+        error_location: SourceSpan,
+    },
+
+    #[diagnostic(severity(Error), code(invalid_port_default_value), help(""), url(""))]
+    #[error("#{direction} port #{identifier} cannot have a port default value")]
+    InvalidPortDefaultValue {
+        identifier: String,
+        direction: String,
         #[source_code]
         input: NamedSource<String>,
         #[label("Error location")]
@@ -1011,11 +1031,34 @@ pub enum AnalyzerError {
         #[label("Error location")]
         error_location: SourceSpan,
     },
+
+    #[diagnostic(
+        severity(Error),
+        code(wrong_seperator),
+        help("replace valid separator \"{valid_separator}\""),
+        url("")
+    )]
+    #[error("separator \"{separator}\" can't be used at here")]
+    WrongSeparator {
+        separator: String,
+        valid_separator: String,
+        #[source_code]
+        input: NamedSource<String>,
+        #[label("Error location")]
+        error_location: SourceSpan,
+    },
 }
 
 impl AnalyzerError {
     fn named_source(source: &str, token: &TokenRange) -> NamedSource<String> {
         NamedSource::new(token.beg.source.to_string(), source.to_string())
+    }
+
+    pub fn anonymous_identifier_usage(source: &str, token: &TokenRange) -> Self {
+        AnalyzerError::AnonymousIdentifierUsage {
+            input: AnalyzerError::named_source(source, token),
+            error_location: token.into(),
+        }
     }
 
     pub fn call_non_function(
@@ -1246,6 +1289,20 @@ impl AnalyzerError {
     ) -> Self {
         AnalyzerError::InvalidModportFunctionItem {
             identifier: identifier.into(),
+            input: AnalyzerError::named_source(source, token),
+            error_location: token.into(),
+        }
+    }
+
+    pub fn invalid_port_default_value(
+        identifier: &str,
+        direction: &str,
+        source: &str,
+        token: &TokenRange,
+    ) -> Self {
+        AnalyzerError::InvalidPortDefaultValue {
+            identifier: identifier.into(),
+            direction: direction.into(),
             input: AnalyzerError::named_source(source, token),
             error_location: token.into(),
         }
@@ -1658,6 +1715,16 @@ impl AnalyzerError {
         AnalyzerError::IncludeFailure {
             name: name.to_string(),
             cause: cause.to_string(),
+            input: AnalyzerError::named_source(source, token),
+            error_location: token.into(),
+        }
+    }
+
+    pub fn wrong_seperator(separator: &str, source: &str, token: &TokenRange) -> Self {
+        let valid_separator = if separator == "." { "::" } else { "." };
+        AnalyzerError::WrongSeparator {
+            separator: separator.to_string(),
+            valid_separator: valid_separator.to_string(),
             input: AnalyzerError::named_source(source, token),
             error_location: token.into(),
         }

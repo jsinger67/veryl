@@ -33,6 +33,34 @@ use veryl_parser::veryl_walker::{Handler, HandlerPoint};
 use veryl_parser::ParolError;
 
 #[derive(Default)]
+struct GenericContext {
+    parameters: Vec<Vec<SymbolId>>,
+    references: Vec<Vec<GenericSymbolPath>>,
+}
+
+impl GenericContext {
+    pub fn push(&mut self) {
+        self.parameters.push(Vec::new());
+        self.references.push(Vec::new());
+    }
+
+    pub fn pop(&mut self) -> (Vec<SymbolId>, Vec<GenericSymbolPath>) {
+        (
+            self.parameters.pop().unwrap(),
+            self.references.pop().unwrap(),
+        )
+    }
+
+    pub fn push_parameter(&mut self, id: SymbolId) {
+        self.parameters.last_mut().unwrap().push(id);
+    }
+
+    pub fn push_reference(&mut self, path: GenericSymbolPath) {
+        self.references.last_mut().unwrap().push(path);
+    }
+}
+
+#[derive(Default)]
 pub struct CreateSymbolTable<'a> {
     pub errors: Vec<AnalyzerError>,
     text: &'a str,
@@ -54,11 +82,10 @@ pub struct CreateSymbolTable<'a> {
     affiliation: Vec<VariableAffiliation>,
     connect_targets: Vec<ConnectTarget>,
     connects: HashMap<Token, Vec<ConnectTarget>>,
-    generic_parameters: Vec<Vec<SymbolId>>,
     parameters: Vec<Vec<Parameter>>,
     ports: Vec<Vec<Port>>,
     needs_default_generic_argument: bool,
-    generic_references: Vec<GenericSymbolPath>,
+    generic_context: GenericContext,
     default_clock_candidates: Vec<SymbolId>,
     defualt_reset_candidates: Vec<SymbolId>,
     modport_member_ids: Vec<SymbolId>,
@@ -369,7 +396,7 @@ impl<'a> CreateSymbolTable<'a> {
     }
 }
 
-impl<'a> Handler for CreateSymbolTable<'a> {
+impl Handler for CreateSymbolTable<'_> {
     fn set_point(&mut self, p: HandlerPoint) {
         self.point = p;
     }
@@ -384,7 +411,7 @@ fn scoped_identifier_tokens(arg: &ScopedIdentifier) -> Vec<Token> {
     ret
 }
 
-impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
+impl VerylGrammarTrait for CreateSymbolTable<'_> {
     fn identifier(&mut self, arg: &Identifier) -> Result<(), ParolError> {
         if let HandlerPoint::Before = self.point {
             let id = arg.identifier_token.token.id;
@@ -433,7 +460,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
             HandlerPoint::After => {
                 let path: GenericSymbolPath = arg.into();
                 if path.is_generic_reference() {
-                    self.generic_references.push(path);
+                    self.generic_context.push_reference(path);
                 }
             }
         }
@@ -790,15 +817,14 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
                     StructUnion::Union(_) => Some(StructOrUnion::InUnion),
                 };
 
-                self.generic_parameters.push(Vec::new());
+                self.generic_context.push();
                 self.namespace.push(name);
             }
             HandlerPoint::After => {
                 self.struct_or_union = None;
                 self.namespace.pop();
 
-                let generic_parameters: Vec<_> = self.generic_parameters.pop().unwrap();
-                let generic_references: Vec<_> = self.generic_references.drain(..).collect();
+                let (generic_parameters, generic_references) = self.generic_context.pop();
 
                 let members: Vec<_> = self.struct_union_members.drain(0..).flatten().collect();
                 let kind = match &*arg.struct_union {
@@ -980,7 +1006,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
                 if let Some(id) =
                     self.insert_symbol(&arg.identifier.identifier_token.token, kind, false)
                 {
-                    self.generic_parameters.last_mut().unwrap().push(id);
+                    self.generic_context.push_parameter(id);
                 }
             } else {
                 self.errors.push(AnalyzerError::missing_default_argument(
@@ -1014,6 +1040,10 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
                     } else {
                         SymClockDomain::None
                     };
+                    let default_value = x
+                        .port_type_concrete_opt0
+                        .as_ref()
+                        .map(|x| *x.port_default_value.expression.clone());
                     PortProperty {
                         token,
                         r#type: Some(r#type),
@@ -1021,6 +1051,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
                         prefix,
                         suffix,
                         clock_domain,
+                        default_value,
                         is_proto: self.in_proto,
                     }
                 }
@@ -1062,6 +1093,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
                         prefix: None,
                         suffix: None,
                         clock_domain,
+                        default_value: None,
                         is_proto: self.in_proto,
                     }
                 }
@@ -1072,7 +1104,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
                 self.insert_symbol(&arg.identifier.identifier_token.token, kind.clone(), false)
             {
                 let port = Port {
-                    name: arg.identifier.identifier_token.token.text,
+                    token: arg.identifier.identifier_token.clone(),
                     symbol: id,
                 };
                 self.ports.last_mut().unwrap().push(port);
@@ -1091,7 +1123,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
         match self.point {
             HandlerPoint::Before => {
                 self.namespace.push(name);
-                self.generic_parameters.push(Vec::new());
+                self.generic_context.push();
                 self.ports.push(Vec::new());
                 self.affiliation.push(VariableAffiliation::Function);
             }
@@ -1099,8 +1131,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
                 self.namespace.pop();
                 self.affiliation.pop();
 
-                let generic_parameters: Vec<_> = self.generic_parameters.pop().unwrap();
-                let generic_references: Vec<_> = self.generic_references.drain(..).collect();
+                let (generic_parameters, generic_references) = self.generic_context.pop();
                 let ports: Vec<_> = self.ports.pop().unwrap();
 
                 let ret = arg
@@ -1165,7 +1196,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
         match self.point {
             HandlerPoint::Before => {
                 self.namespace.push(name);
-                self.generic_parameters.push(Vec::new());
+                self.generic_context.push();
                 self.parameters.push(Vec::new());
                 self.ports.push(Vec::new());
                 self.affiliation.push(VariableAffiliation::Module);
@@ -1180,8 +1211,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
                 self.affiliation.pop();
                 self.module_namspace_depth = 0;
 
-                let generic_parameters: Vec<_> = self.generic_parameters.pop().unwrap();
-                let generic_references: Vec<_> = self.generic_references.drain(..).collect();
+                let (generic_parameters, generic_references) = self.generic_context.pop();
                 let parameters: Vec<_> = self.parameters.pop().unwrap();
                 let ports: Vec<_> = self.ports.pop().unwrap();
 
@@ -1296,7 +1326,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
         match self.point {
             HandlerPoint::Before => {
                 self.namespace.push(name);
-                self.generic_parameters.push(Vec::new());
+                self.generic_context.push();
                 self.parameters.push(Vec::new());
                 self.affiliation.push(VariableAffiliation::Intarface);
                 self.function_ids.clear();
@@ -1308,8 +1338,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
                 self.namespace.pop();
                 self.affiliation.pop();
 
-                let generic_parameters: Vec<_> = self.generic_parameters.pop().unwrap();
-                let generic_references: Vec<_> = self.generic_references.drain(..).collect();
+                let (generic_parameters, generic_references) = self.generic_context.pop();
                 let parameters: Vec<_> = self.parameters.pop().unwrap();
 
                 let range =
@@ -1350,7 +1379,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
         match self.point {
             HandlerPoint::Before => {
                 self.namespace.push(name);
-                self.generic_parameters.push(Vec::new());
+                self.generic_context.push();
                 self.affiliation.push(VariableAffiliation::Package);
                 self.function_ids.clear();
 
@@ -1360,8 +1389,7 @@ impl<'a> VerylGrammarTrait for CreateSymbolTable<'a> {
                 self.namespace.pop();
                 self.affiliation.pop();
 
-                let generic_parameters: Vec<_> = self.generic_parameters.pop().unwrap();
-                let generic_references: Vec<_> = self.generic_references.drain(..).collect();
+                let (generic_parameters, generic_references) = self.generic_context.pop();
 
                 let range = TokenRange::new(&arg.package.package_token, &arg.r_brace.r_brace_token);
 

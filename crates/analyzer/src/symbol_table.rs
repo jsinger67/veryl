@@ -256,10 +256,7 @@ impl SymbolTable {
                                 context.namespace = symbol.inner_namespace();
                                 context.inner = true;
                             } else {
-                                context.namespace = Namespace::default();
-                                for x in path.as_slice() {
-                                    context.namespace.push(*x);
-                                }
+                                context.namespace = symbol.found.inner_namespace();
                                 context.inner = true;
                             }
                         }
@@ -550,7 +547,7 @@ struct ResolveContext<'a> {
     imported: bool,
 }
 
-impl<'a> ResolveContext<'a> {
+impl ResolveContext<'_> {
     fn new(namespace: &Namespace) -> Self {
         Self {
             found: None,

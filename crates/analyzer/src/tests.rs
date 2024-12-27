@@ -730,6 +730,61 @@ fn invalid_modport_item() {
 }
 
 #[test]
+fn invalid_port_default_value() {
+    let code = r#"
+    module ModuleA (
+        a: output logic = 0,
+    ){}
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(
+        errors[0],
+        AnalyzerError::InvalidPortDefaultValue { .. }
+    ));
+
+    let code = r#"
+    module ModuleA (
+        a: inout tri logic = 0,
+    ){}
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(
+        errors[0],
+        AnalyzerError::InvalidPortDefaultValue { .. }
+    ));
+
+    let code = r#"
+    module ModuleA (
+        a: ref logic = 0,
+    ){}
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(
+        errors[0],
+        AnalyzerError::InvalidPortDefaultValue { .. }
+    ));
+
+    let code = r#"
+    module ModuleA {
+        function FuncA(
+            a: output logic = _,
+        ) {
+            a = 0;
+        }
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(
+        errors[0],
+        AnalyzerError::InvalidPortDefaultValue { .. }
+    ));
+}
+
+#[test]
 fn mismatch_function_arity() {
     let code = r#"
     module ModuleA {
@@ -1167,6 +1222,35 @@ fn mismatch_type() {
 
     let errors = analyze(code);
     assert!(matches!(errors[0], AnalyzerError::MismatchType { .. }));
+
+    let code = r#"
+    module ModuleA {
+        enum EnumA {
+            B,
+        }
+        let _a: EnumA = EnumA::B;
+        let _b: EnumA = _a::B;
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(errors[0], AnalyzerError::MismatchType { .. }));
+
+    let code = r#"
+    module ModuleA {
+        enum EnumA {
+            A,
+            B,
+        }
+        type EnumB = EnumA;
+
+        let _a: EnumA = EnumA::A;
+        let _b: EnumB = EnumB::B;
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
 }
 
 #[test]
@@ -1199,6 +1283,22 @@ fn missing_port() {
 
     let errors = analyze(code);
     assert!(matches!(errors[0], AnalyzerError::MissingPort { .. }));
+
+    let code = r#"
+    module ModuleA {
+        inst u: ModuleB;
+    }
+
+    module ModuleB (
+        i_a: input  logic = 0,
+        o_b: output logic = _,
+    ) {
+        assign o_b = 0;
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
 }
 
 #[test]
@@ -1707,6 +1807,28 @@ fn unknown_member() {
 
     let errors = analyze(code);
     assert!(matches!(errors[0], AnalyzerError::UnknownMember { .. }));
+
+    let code = r#"
+    module ModuleA (
+        a_if: interface
+    ) {
+        assign a_if.a = 0;
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
+
+    let code = r#"
+    module ModuleA (
+        a_if: interface::mp
+    ) {
+        assign a_if.a = 0;
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
 }
 
 #[test]
@@ -1720,6 +1842,62 @@ fn unknown_msb() {
 
     let errors = analyze(code);
     assert!(matches!(errors[0], AnalyzerError::UnknownMsb { .. }));
+
+    let code = r#"
+    interface InterfaceA {
+        var a: logic<2>;
+        modport mp {
+            a: input
+        }
+    }
+    module ModuleA (
+        if_a: modport InterfaceA::mp
+    ) {
+        let a: logic = if_a.a[msb];
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(errors[0], AnalyzerError::UnknownMsb { .. }));
+
+    let code = r#"
+    interface InterfaceA #(
+        param W: u32 = 2
+    ){
+        var a: logic<W>;
+    }
+    module ModuleA {
+        inst if_a: InterfaceA;
+        assign if_a.a = 0;
+        let a: logic = if_a.a[msb];
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(errors[0], AnalyzerError::UnknownMsb { .. }));
+
+    let code = r#"
+    package PackageA::<W: const> {
+        struct StructA {
+            a: logic<W>,
+        }
+    }
+    package PackageB {
+        const B: u32 = 2;
+    }
+    package PackageC {
+        const C: bit<2> = 0;
+    }
+    module ModuleA {
+        var a: PackageA::<PackageB::B>::StructA;
+        assign a.a = 0;
+        let _b: logic = a.a[msb];
+        let _c: logic = PackageC::C[msb];
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
 }
 
 #[test]
@@ -2005,6 +2183,50 @@ fn unassign_variable() {
 
     let errors = analyze(code);
     assert!(errors.is_empty());
+
+    let code = r#"
+    interface InterfaceA {
+        function FuncA(
+            a: output logic,
+            b: ref    logic
+        ) {
+            a = 0;
+            b = 1;
+        }
+        modport mp {
+            FuncA: import,
+        }
+    }
+    module ModuleA (
+        if_a: modport InterfaceA::mp
+    ){
+        function FuncB(
+            a: output logic,
+            b: ref    logic,
+        ) -> logic {
+            a = 0;
+            b = 1;
+            return 0;
+        }
+
+        var _a: logic;
+        var _b: logic;
+        var _c: logic;
+        var _d: logic;
+        var _e: logic;
+
+        always_comb {
+            if_a.FuncA(_a, _b);
+        }
+
+        always_comb {
+            _c = FuncB(_d, _e);
+        }
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
 }
 
 #[test]
@@ -2054,6 +2276,111 @@ fn uncovered_branch() {
 
     let errors = analyze(code);
     assert!(matches!(errors[0], AnalyzerError::UncoveredBranch { .. }));
+}
+
+#[test]
+fn anonymous_identifier() {
+    let code = r#"
+    module ModuleA (
+        i_clk: input `_ clock,
+    ) {
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
+
+    let code = r#"
+    module _ {
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(
+        errors[0],
+        AnalyzerError::AnonymousIdentifierUsage { .. }
+    ));
+
+    let code = r#"
+    module ModuleA {
+        let a: logic = _ + 1;
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(
+        errors[0],
+        AnalyzerError::AnonymousIdentifierUsage { .. }
+    ));
+
+    let code = r#"
+    module SubA (
+        i_a: input logic
+    ) {
+    }
+    module ModuleA {
+        inst u_sub: SubA (
+            i_a: _
+        );
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(
+        errors[0],
+        AnalyzerError::AnonymousIdentifierUsage { .. }
+    ));
+
+    let code = r#"
+    module SubA (
+        o_a: output logic
+    ) {
+        assign o_a = 0;
+    }
+    module ModuleA {
+        inst u_sub: SubA (
+            o_a: _
+        );
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
+
+    let code = r#"
+    module ModuleA {
+        inst u_sub: $sv::Sub (
+            i_a: _,
+            o_b: _,
+        );
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
+
+    let code = r#"
+    module ModuleA (
+        i_a: input logic = _,
+    ) {}
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(
+        errors[0],
+        AnalyzerError::AnonymousIdentifierUsage { .. }
+    ));
+
+    let code = r#"
+    module ModuleA (
+        o_a: output logic = _,
+    ) {
+        assign o_a = 0;
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
 }
 
 #[test]
@@ -2113,6 +2440,49 @@ fn invalid_factor_kind() {
 
     let errors = analyze(code);
     assert!(matches!(errors[0], AnalyzerError::InvalidFactor { .. }));
+
+    let code = r#"
+    interface InterfaceA {
+        var a: logic;
+        modport master {
+            a: input,
+        }
+    }
+    module ModuleA (
+        b: modport InterfaceA::master,
+    ) {
+        var a: logic;
+        always_comb {
+            a = b;
+        }
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(errors[0], AnalyzerError::InvalidFactor { .. }));
+
+    let code = r#"
+    module ModuleA #(
+        param A: bit = 0
+    )(
+        a: input logic = A,
+    ){}
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(errors[0], AnalyzerError::InvalidFactor { .. }));
+
+    let code = r#"
+    package PackageA {
+        const A: bit = 0;
+    }
+    module ModuleA (
+        a: input  logic = PackageA::A,
+    ){}
+    "#;
+
+    let errors = analyze(code);
+    assert!(errors.is_empty());
 }
 
 #[test]
@@ -2683,8 +3053,98 @@ fn unresolvable_generic_argument() {
     "#;
 
     let errors = analyze(code);
-    assert!(matches!(
-        errors[0],
-        AnalyzerError::UnresolvableGenericArgument { .. }
-    ));
+    // This pattern also causes CyclicTypeDependency error
+    assert!(errors
+        .iter()
+        .any(|e| matches!(e, AnalyzerError::UnresolvableGenericArgument { .. })));
+}
+
+#[test]
+fn wrong_seperator() {
+    let code = r#"
+    package A {
+        enum B {
+            C,
+        }
+    }
+    module Module {
+        var _a: A::B;
+
+        always_comb {
+            _a = A.B.C;
+        }
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(errors[0], AnalyzerError::WrongSeparator { .. }));
+
+    let code = r#"
+    package A {
+        enum B {
+            C,
+        }
+    }
+    module Module {
+        var _a: A::B;
+
+        always_comb {
+            _a = A::B.C;
+        }
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(errors[0], AnalyzerError::WrongSeparator { .. }));
+
+    let code = r#"
+    module Module {
+        struct B {
+            b: logic,
+        }
+
+        var _a: B;
+        always_comb {
+            _a::b = '0;
+        }
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(errors[0], AnalyzerError::WrongSeparator { .. }));
+
+    let code = r#"
+    interface B {
+        var c: logic;
+        modport mp {
+            c: input,
+        }
+    }
+    module Module (
+        b: modport B::mp
+    ) {
+        var _a: logic;
+        always_comb {
+            _a = b::c;
+        }
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(errors[0], AnalyzerError::WrongSeparator { .. }));
+
+    let code = r#"
+    interface A {
+        var b: logic;
+    }
+    module Module {
+        inst a: A;
+        always_comb {
+            a::b = 0;
+        }
+    }
+    "#;
+
+    let errors = analyze(code);
+    assert!(matches!(errors[0], AnalyzerError::WrongSeparator { .. }));
 }

@@ -32,7 +32,7 @@ impl<'a> CheckType<'a> {
     }
 }
 
-impl<'a> Handler for CheckType<'a> {
+impl Handler for CheckType<'_> {
     fn set_point(&mut self, p: HandlerPoint) {
         self.point = p;
     }
@@ -66,7 +66,7 @@ fn is_casting_type(symbol: &Symbol) -> bool {
     }
 }
 
-impl<'a> VerylGrammarTrait for CheckType<'a> {
+impl VerylGrammarTrait for CheckType<'_> {
     fn user_defined_type(&mut self, _arg: &UserDefinedType) -> Result<(), ParolError> {
         match self.point {
             HandlerPoint::Before => {
@@ -122,9 +122,28 @@ impl<'a> VerylGrammarTrait for CheckType<'a> {
 
     fn scoped_identifier(&mut self, arg: &ScopedIdentifier) -> Result<(), ParolError> {
         if let HandlerPoint::Before = self.point {
-            // Check variable type
-            if !self.in_user_defined_type.is_empty() && self.in_generic_argument.is_empty() {
-                if let Ok(symbol) = symbol_table::resolve(arg) {
+            if let Ok(symbol) = symbol_table::resolve(arg) {
+                // Check enum variant should be scoped by enum
+                // refs: https://github.com/veryl-lang/veryl/issues/1114
+                if matches!(symbol.found.kind, SymbolKind::EnumMember(_)) {
+                    let preceed_id = symbol.full_path.get(symbol.full_path.len() - 2).unwrap();
+                    let preceed_symbol = symbol_table::get(*preceed_id).unwrap();
+                    if !matches!(
+                        preceed_symbol.kind,
+                        SymbolKind::Enum(_) | SymbolKind::TypeDef(_)
+                    ) {
+                        self.errors.push(AnalyzerError::mismatch_type(
+                            &preceed_symbol.token.to_string(),
+                            "enum",
+                            &preceed_symbol.kind.to_kind_name(),
+                            self.text,
+                            &preceed_symbol.token.into(),
+                        ));
+                    }
+                }
+
+                // Check variable type
+                if !self.in_user_defined_type.is_empty() && self.in_generic_argument.is_empty() {
                     if self.in_modport {
                         if !matches!(symbol.found.kind, SymbolKind::Modport(_)) {
                             self.errors.push(AnalyzerError::mismatch_type(
@@ -344,13 +363,14 @@ impl<'a> VerylGrammarTrait for CheckType<'a> {
 
                 if check_port_connection {
                     for port in &ports {
-                        if !connected_ports.contains(&port.name)
+                        if !connected_ports.contains(&port.name())
+                            && port.property().default_value.is_none()
                             && !attribute_table::contains(
                                 &arg.inst.inst_token.token,
                                 Attr::Allow(AllowItem::MissingPort),
                             )
                         {
-                            let port = resource_table::get_str_value(port.name).unwrap();
+                            let port = resource_table::get_str_value(port.name()).unwrap();
                             self.errors.push(AnalyzerError::missing_port(
                                 name,
                                 &port,
@@ -371,7 +391,7 @@ impl<'a> VerylGrammarTrait for CheckType<'a> {
                         }
                     }
                     for port in &connected_ports {
-                        if !ports.iter().any(|x| &x.name == port) {
+                        if !ports.iter().any(|x| &x.name() == port) {
                             let port = resource_table::get_str_value(*port).unwrap();
                             self.errors.push(AnalyzerError::unknown_port(
                                 name,

@@ -2,21 +2,21 @@ use std::fs;
 use std::path::Path;
 use veryl_aligner::{align_kind, Aligner, Location};
 use veryl_analyzer::attribute::Attribute as Attr;
-use veryl_analyzer::attribute::{CondTypeItem, EnumEncodingItem};
+use veryl_analyzer::attribute::{AllowItem, CondTypeItem, EnumEncodingItem};
 use veryl_analyzer::attribute_table;
 use veryl_analyzer::evaluator::{Evaluated, Evaluator};
 use veryl_analyzer::namespace::Namespace;
 use veryl_analyzer::symbol::TypeModifier as SymTypeModifier;
 use veryl_analyzer::symbol::{
-    GenericMap, Symbol, SymbolId, SymbolKind, TypeKind, VariableAffiliation,
+    GenericMap, Port, Symbol, SymbolId, SymbolKind, TypeKind, VariableAffiliation,
 };
 use veryl_analyzer::symbol_path::{GenericSymbolPath, SymbolPath};
-use veryl_analyzer::symbol_table;
+use veryl_analyzer::symbol_table::{self, ResolveError, ResolveResult};
 use veryl_analyzer::{msb_table, namespace_table};
 use veryl_metadata::{Build, BuiltinType, ClockType, Format, Metadata, ResetType, SourceMapTarget};
 use veryl_parser::resource_table::{self, StrId};
 use veryl_parser::veryl_grammar_trait::*;
-use veryl_parser::veryl_token::{Token, TokenSource, VerylToken};
+use veryl_parser::veryl_token::{is_anonymous_token, Token, TokenSource, VerylToken};
 use veryl_parser::veryl_walker::VerylWalker;
 use veryl_parser::Stringifier;
 use veryl_sourcemap::SourceMap;
@@ -69,8 +69,9 @@ pub struct Emitter {
     file_scope_import: Vec<String>,
     attribute: Vec<AttributeType>,
     assignment_lefthand_side: Option<ExpressionIdentifier>,
-    generic_map: Vec<GenericMap>,
+    generic_map: Vec<Vec<GenericMap>>,
     source_map: Option<SourceMap>,
+    resolved_identifier: Vec<String>,
 }
 
 impl Default for Emitter {
@@ -108,8 +109,16 @@ impl Default for Emitter {
             assignment_lefthand_side: None,
             generic_map: Vec::new(),
             source_map: None,
+            resolved_identifier: Vec::new(),
         }
     }
+}
+
+fn is_ifdef_attribute(arg: &Attribute) -> bool {
+    matches!(
+        arg.identifier.identifier_token.token.to_string().as_str(),
+        "ifdef" | "ifndef"
+    )
 }
 
 impl Emitter {
@@ -199,6 +208,17 @@ impl Emitter {
         let indent_width =
             self.indent * self.format_opt.indent_width + self.case_item_indent.unwrap_or(0);
         self.str(&" ".repeat(indent_width));
+    }
+
+    fn case_item_indent_push(&mut self, x: usize) {
+        self.case_item_indent = Some(x);
+    }
+
+    fn case_item_indent_pop(&mut self) {
+        // cancel indent and re-indent after pop
+        self.unindent();
+        self.case_item_indent = None;
+        self.indent();
     }
 
     fn newline_push(&mut self) {
@@ -432,9 +452,9 @@ impl Emitter {
         match arg.case_item_group0.as_ref() {
             CaseItemGroup0::Statement(x) => self.statement(&x.statement),
             CaseItemGroup0::StatementBlock(x) => {
-                self.case_item_indent = Some((self.dst_column - start) as usize);
+                self.case_item_indent_push((self.dst_column - start) as usize);
                 self.statement_block(&x.statement_block);
-                self.case_item_indent = None;
+                self.case_item_indent_pop();
             }
         }
     }
@@ -480,9 +500,9 @@ impl Emitter {
         match item.case_item_group0.as_ref() {
             CaseItemGroup0::Statement(x) => self.statement(&x.statement),
             CaseItemGroup0::StatementBlock(x) => {
-                self.case_item_indent = Some((self.dst_column - start) as usize);
+                self.case_item_indent_push((self.dst_column - start) as usize);
                 self.statement_block(&x.statement_block);
-                self.case_item_indent = None;
+                self.case_item_indent_pop();
             }
         }
     }
@@ -567,6 +587,25 @@ impl Emitter {
             self.expression(&rhs.range.expression);
             self.str(")");
         }
+    }
+
+    fn always_ff_explicit_event_list(
+        &mut self,
+        arg: &AlwaysFfEventList,
+        decl: &AlwaysFfDeclaration,
+    ) {
+        self.l_paren(&arg.l_paren);
+        self.always_ff_clock(&arg.always_ff_clock);
+        if let Some(ref x) = arg.always_ff_event_list_opt {
+            if self.always_ff_reset_exist_in_sensitivity_list(&x.always_ff_reset) {
+                self.comma(&x.comma);
+                self.space(1);
+            }
+            self.always_ff_reset(&x.always_ff_reset);
+        } else if self.always_ff_if_reset_exists(decl) {
+            self.always_ff_implicit_reset_event();
+        }
+        self.r_paren(&arg.r_paren);
     }
 
     fn always_ff_implicit_event_list(&mut self, arg: &AlwaysFfDeclaration) {
@@ -737,7 +776,7 @@ impl Emitter {
     }
 
     fn emit_generate_named_block(&mut self, arg: &GenerateNamedBlock, prefix: &str) {
-        self.default_block = Some(arg.identifier.identifier_token.to_string());
+        self.default_block = Some(emitting_identifier(arg.identifier.as_ref()).to_string());
         self.token_will_push(
             &arg.l_brace
                 .l_brace_token
@@ -760,28 +799,55 @@ impl Emitter {
         let statement_block_list: Vec<_> = arg
             .statement_block_list
             .iter()
-            .flat_map(|x| Into::<Vec<StatementBlockItem>>::into(x.statement_block_group.as_ref()))
+            .map(|x| Into::<Vec<StatementBlockItem>>::into(x.statement_block_group.as_ref()))
             .collect();
 
         let mut base = 0;
-        for (i, x) in statement_block_list
-            .iter()
-            .filter(|x| is_var_declaration(x) || is_let_statement(x))
-            .enumerate()
-        {
-            self.newline_list(i);
-            base += self.statement_variable_declatation_only(x);
+        let mut n_newlines = 0;
+        for x in &statement_block_list {
+            for x in x {
+                if is_var_declaration(x) || is_let_statement(x) {
+                    self.newline_list(n_newlines);
+                    base += self.statement_variable_declatation_only(x);
+                    n_newlines += 1;
+                }
+            }
         }
-        for (i, x) in statement_block_list
-            .iter()
-            .filter(|x| !is_var_declaration(x))
-            .enumerate()
-        {
-            self.newline_list(base + i);
-            match &x {
-                StatementBlockItem::LetStatement(x) => self.let_statement(&x.let_statement),
-                StatementBlockItem::Statement(x) => self.statement(&x.statement),
-                _ => unreachable!(),
+
+        let mut n_newlines = 0;
+        for (i, x) in statement_block_list.iter().enumerate() {
+            for x in x {
+                let ifdef_attributes: Vec<_> = arg.statement_block_list[i]
+                    .statement_block_group
+                    .statement_block_group_list
+                    .iter()
+                    .filter(|x| is_ifdef_attribute(&x.attribute))
+                    .collect();
+
+                for (j, x) in ifdef_attributes.iter().enumerate() {
+                    if i == 0 && j == 0 {
+                        self.newline_list(base + n_newlines);
+                        n_newlines += 1;
+                    }
+                    self.attribute(&x.attribute);
+                }
+
+                if !is_var_declaration(x) {
+                    if i != 0 || ifdef_attributes.is_empty() {
+                        self.newline_list(base + n_newlines);
+                        n_newlines += 1;
+                    }
+
+                    match &x {
+                        StatementBlockItem::LetStatement(x) => self.let_statement(&x.let_statement),
+                        StatementBlockItem::Statement(x) => self.statement(&x.statement),
+                        _ => unreachable!(),
+                    }
+                }
+
+                for _ in ifdef_attributes {
+                    self.attribute_end();
+                }
             }
         }
         self.newline_list_post(arg.statement_block_list.is_empty());
@@ -834,6 +900,145 @@ impl Emitter {
             (prefix, false)
         } else {
             (None, prefix.is_some())
+        }
+    }
+
+    fn emit_inst_unconnected_port(
+        &mut self,
+        defined_ports: &[Port],
+        connected_ports: &[InstPortItem],
+        generic_map: &[GenericMap],
+    ) {
+        if defined_ports.is_empty() || defined_ports.len() == connected_ports.len() {
+            return;
+        }
+
+        self.generic_map.push(generic_map.to_owned());
+
+        let unconnected_ports = defined_ports.iter().filter(|x| {
+            !connected_ports
+                .iter()
+                .any(|y| x.name() == y.identifier.identifier_token.token.text)
+        });
+        for (i, port) in unconnected_ports.enumerate() {
+            if i >= 1 || !connected_ports.is_empty() {
+                self.str(",");
+                self.newline();
+            }
+
+            let property = port.property();
+            self.str(".");
+            self.align_start(align_kind::IDENTIFIER);
+            self.token(&port.token);
+            self.align_finish(align_kind::IDENTIFIER);
+            self.space(1);
+            self.str("(");
+            self.align_start(align_kind::EXPRESSION);
+            self.expression(&property.default_value.unwrap());
+            self.align_finish(align_kind::EXPRESSION);
+            self.str(")");
+        }
+
+        self.generic_map.pop();
+    }
+
+    fn emit_function_call(
+        &mut self,
+        identifier: &ExpressionIdentifier,
+        function_call: &FunctionCall,
+    ) {
+        let (defiend_ports, generic_map) = if let (Ok(symbol), _) =
+            self.resolve_symbol_with_generics(&identifier.scoped_identifier)
+        {
+            match symbol.found.kind {
+                SymbolKind::Function(ref x) => (x.ports.clone(), Vec::new()),
+                SymbolKind::GenericInstance(ref x) => {
+                    let base = symbol_table::get(x.base).unwrap();
+                    match base.kind {
+                        SymbolKind::Function(ref x) => {
+                            (x.ports.clone(), symbol.found.generic_maps())
+                        }
+                        _ => (Vec::new(), Vec::new()),
+                    }
+                }
+                _ => (Vec::new(), Vec::new()),
+            }
+        } else {
+            unreachable!()
+        };
+
+        self.l_paren(&function_call.l_paren);
+        let n_args = if let Some(ref x) = function_call.function_call_opt {
+            self.argument_list(&x.argument_list);
+            1 + x.argument_list.argument_list_list.len()
+        } else {
+            0
+        };
+
+        self.generic_map.push(generic_map);
+
+        let unconnected_ports = defiend_ports.iter().skip(n_args);
+        for (i, port) in unconnected_ports.enumerate() {
+            if i >= 1 || n_args >= 1 {
+                self.str(", ");
+            }
+
+            let property = port.property();
+            self.expression(&property.default_value.unwrap());
+        }
+
+        self.generic_map.pop();
+        self.r_paren(&function_call.r_paren);
+    }
+
+    fn resolve_symbol_with_generics(
+        &self,
+        arg: &ScopedIdentifier,
+    ) -> (Result<ResolveResult, ResolveError>, GenericSymbolPath) {
+        let namespace = namespace_table::get(arg.identifier().token.id).unwrap();
+        let mut path: GenericSymbolPath = arg.into();
+        path.resolve_imported(&namespace);
+
+        for i in 0..path.len() {
+            let base = path.base_path(i);
+            if let Ok(symbol) = symbol_table::resolve((&base, &namespace)) {
+                let params = symbol.found.generic_parameters();
+                let n_args = path.paths[i].arguments.len();
+
+                for param in params.iter().skip(n_args) {
+                    path.paths[i]
+                        .arguments
+                        .push(param.1.default_value.as_ref().unwrap().clone());
+                }
+            }
+        }
+
+        if let Some(maps) = self.generic_map.last() {
+            path.apply_map(maps);
+        }
+        (
+            symbol_table::resolve((&path.mangled_path(), &namespace)),
+            path,
+        )
+    }
+
+    fn push_resolved_identifier(&mut self, x: &str) {
+        if let Some(identifier) = self.resolved_identifier.last_mut() {
+            identifier.push_str(x);
+        }
+    }
+
+    fn push_generic_map(&mut self, map: GenericMap) {
+        if let Some(maps) = self.generic_map.last_mut() {
+            maps.push(map);
+        } else {
+            self.generic_map.push(vec![map]);
+        }
+    }
+
+    fn pop_generic_map(&mut self) {
+        if let Some(maps) = self.generic_map.last_mut() {
+            maps.pop();
         }
     }
 }
@@ -993,10 +1198,15 @@ impl VerylWalker for Emitter {
 
     /// Semantic action for non-terminal 'Msb'
     fn msb(&mut self, arg: &Msb) {
-        let expression = msb_table::get(arg.msb_token.token.id).unwrap();
-        self.str("((");
-        self.expression(&expression);
-        self.str(") - 1)");
+        let identifier = self.resolved_identifier.last().unwrap();
+        let demension_number = msb_table::get(arg.msb_token.token.id).unwrap();
+
+        let text = if demension_number == 0 {
+            format!("($bits({}) - 1)", identifier)
+        } else {
+            format!("($size({}, {}) - 1)", identifier, demension_number)
+        };
+        self.token(&arg.msb_token.replace(&text));
     }
 
     /// Semantic action for non-terminal 'Param'
@@ -1021,16 +1231,9 @@ impl VerylWalker for Emitter {
 
     /// Semantic action for non-terminal 'Identifier'
     fn identifier(&mut self, arg: &Identifier) {
-        let (prefix, suffix) = if let Ok(found) = symbol_table::resolve(arg) {
-            match &found.found.kind {
-                SymbolKind::Port(x) => (x.prefix.clone(), x.suffix.clone()),
-                SymbolKind::Variable(x) => (x.prefix.clone(), x.suffix.clone()),
-                _ => (None, None),
-            }
-        } else {
-            (None, None)
-        };
-        self.veryl_token(&identifier_with_prefix_suffix(arg, &prefix, &suffix));
+        let text = emitting_identifier(arg);
+        self.veryl_token(&text);
+        self.push_resolved_identifier(&text.to_string());
     }
 
     /// Semantic action for non-terminal 'HierarchicalIdentifier'
@@ -1088,49 +1291,49 @@ impl VerylWalker for Emitter {
 
     /// Semantic action for non-terminal 'ScopedIdentifier'
     fn scoped_identifier(&mut self, arg: &ScopedIdentifier) {
-        let namespace = namespace_table::get(arg.identifier().token.id).unwrap();
-        let mut path: GenericSymbolPath = arg.into();
-        path.resolve_imported(&namespace);
-
-        for i in 0..path.len() {
-            let base_path = path.base_path(i);
-            if let Ok(symbol) = symbol_table::resolve((&base_path, &namespace)) {
-                let params = symbol.found.generic_parameters();
-                let n_args = path.paths[i].arguments.len();
-
-                for param in params.iter().skip(n_args) {
-                    path.paths[i]
-                        .arguments
-                        .push(param.1.default_value.as_ref().unwrap().clone());
+        if is_anonymous_token(&arg.identifier().token) {
+            self.veryl_token(&arg.identifier().replace(""));
+        } else {
+            match self.resolve_symbol_with_generics(arg) {
+                (Ok(symbol), _) => {
+                    let context: SymbolContext = self.into();
+                    let text = symbol_string(arg.identifier(), &symbol.found, &context);
+                    self.veryl_token(&arg.identifier().replace(&text));
+                    self.push_resolved_identifier(&text);
                 }
+                (Err(_), path) if !path.is_resolvable() => {
+                    // emit literal by generics
+                    let text = path.base_path(0).0[0].to_string();
+                    self.veryl_token(&arg.identifier().replace(&text));
+                    self.push_resolved_identifier(&text);
+                }
+                _ => {}
             }
-        }
-
-        path.apply_map(&self.generic_map);
-        if let Ok(symbol) = symbol_table::resolve((&path.mangled_path(), &namespace)) {
-            let context: SymbolContext = self.into();
-            let text = symbol_string(arg.identifier(), &symbol.found, &context);
-            self.veryl_token(&arg.identifier().replace(&text));
-        } else if !path.is_resolvable() {
-            // emit literal by generics
-            let text = path.base_path(0).0[0].to_string();
-            self.veryl_token(&arg.identifier().replace(&text));
         }
     }
 
     /// Semantic action for non-terminal 'ExpressionIdentifier'
     fn expression_identifier(&mut self, arg: &ExpressionIdentifier) {
+        self.resolved_identifier.push("".to_string());
         self.scoped_identifier(&arg.scoped_identifier);
         for x in &arg.expression_identifier_list {
             self.select(&x.select);
         }
+        for _x in &arg.expression_identifier_list {
+            self.push_resolved_identifier("[0]");
+        }
         for x in &arg.expression_identifier_list0 {
             self.dot(&x.dot);
+            self.push_resolved_identifier(".");
             self.identifier(&x.identifier);
             for x in &x.expression_identifier_list0_list {
                 self.select(&x.select);
             }
+            for _x in &x.expression_identifier_list0_list {
+                self.push_resolved_identifier("[0]");
+            }
         }
+        self.resolved_identifier.pop();
     }
 
     /// Semantic action for non-terminal 'Expression'
@@ -1368,6 +1571,14 @@ impl VerylWalker for Emitter {
         }
     }
 
+    /// Semantic action for non-terminal 'IdentifierFactor'
+    fn identifier_factor(&mut self, arg: &IdentifierFactor) {
+        self.expression_identifier(&arg.expression_identifier);
+        if let Some(ref x) = arg.identifier_factor_opt {
+            self.emit_function_call(&arg.expression_identifier, &x.function_call);
+        }
+    }
+
     /// Semantic action for non-terminal 'ArgumentList'
     fn argument_list(&mut self, arg: &ArgumentList) {
         self.argument_item(&arg.argument_item);
@@ -1388,9 +1599,6 @@ impl VerylWalker for Emitter {
             self.comma(&x.comma);
             self.space(1);
             self.concatenation_item(&x.concatenation_item);
-        }
-        if let Some(ref x) = arg.concatenation_list_opt {
-            self.comma(&x.comma);
         }
     }
 
@@ -1415,9 +1623,6 @@ impl VerylWalker for Emitter {
             self.comma(&x.comma);
             self.space(1);
             self.array_literal_item(&x.array_literal_item);
-        }
-        if let Some(ref x) = arg.array_literal_list_opt {
-            self.comma(&x.comma);
         }
     }
 
@@ -1780,7 +1985,7 @@ impl VerylWalker for Emitter {
         //self.str(";");
         //self.newline();
         self.align_start(align_kind::IDENTIFIER);
-        self.str(&arg.identifier.identifier_token.to_string());
+        self.str(&emitting_identifier(arg.identifier.as_ref()).to_string());
         self.align_finish(align_kind::IDENTIFIER);
         self.space(1);
         self.equ(&arg.equ);
@@ -1797,7 +2002,7 @@ impl VerylWalker for Emitter {
         self.align_finish(align_kind::IDENTIFIER);
         match &*arg.identifier_statement_group {
             IdentifierStatementGroup::FunctionCall(x) => {
-                self.function_call(&x.function_call);
+                self.emit_function_call(&arg.expression_identifier, &x.function_call);
             }
             IdentifierStatementGroup::Assignment(x) => {
                 self.assignment(&x.assignment);
@@ -2059,12 +2264,12 @@ impl VerylWalker for Emitter {
         self.align_finish(align_kind::EXPRESSION);
         self.colon(&arg.colon);
         self.space(1);
-        self.case_item_indent = Some((self.dst_column - start) as usize);
+        self.case_item_indent_push((self.dst_column - start) as usize);
         match &*arg.switch_item_group0 {
             SwitchItemGroup0::Statement(x) => self.statement(&x.statement),
             SwitchItemGroup0::StatementBlock(x) => self.statement_block(&x.statement_block),
         }
-        self.case_item_indent = None;
+        self.case_item_indent_pop();
     }
 
     /// Semantic action for non-terminal 'Attribute'
@@ -2185,7 +2390,7 @@ impl VerylWalker for Emitter {
             self.str("always_comb");
         }
         self.space(1);
-        self.str(&arg.identifier.identifier_token.to_string());
+        self.str(&emitting_identifier(arg.identifier.as_ref()).to_string());
         self.space(1);
         self.equ(&arg.equ);
         self.space(1);
@@ -2292,27 +2497,13 @@ impl VerylWalker for Emitter {
         self.str("@");
         self.space(1);
         if let Some(ref x) = arg.always_ff_declaration_opt {
-            self.alwayf_ff_event_list(&x.alwayf_ff_event_list);
+            self.always_ff_explicit_event_list(&x.always_ff_event_list, arg);
         } else {
             self.always_ff_implicit_event_list(arg);
         }
         self.space(1);
         self.statement_block(&arg.statement_block);
         self.in_always_ff = false;
-    }
-
-    /// Semantic action for non-terminal 'AlwayfFfEventList'
-    fn alwayf_ff_event_list(&mut self, arg: &AlwayfFfEventList) {
-        self.l_paren(&arg.l_paren);
-        self.always_ff_clock(&arg.always_ff_clock);
-        if let Some(ref x) = arg.alwayf_ff_event_list_opt {
-            if self.always_ff_reset_exist_in_sensitivity_list(&x.always_ff_reset) {
-                self.comma(&x.comma);
-                self.space(1);
-            }
-            self.always_ff_reset(&x.always_ff_reset);
-        }
-        self.r_paren(&arg.r_paren);
     }
 
     /// Semantic action for non-terminal 'AlwaysFfClock'
@@ -2556,11 +2747,11 @@ impl VerylWalker for Emitter {
             unreachable!();
         };
 
-        self.token(
-            &arg.identifier
-                .identifier_token
-                .append(&Some(format!("{}_", prefix)), &None),
-        );
+        self.token(&identifier_with_prefix_suffix(
+            &arg.identifier,
+            &Some(format!("{}_", prefix)),
+            &None,
+        ));
         if let Some(ref x) = arg.enum_item_opt {
             self.space(1);
             self.equ(&x.equ);
@@ -2584,7 +2775,7 @@ impl VerylWalker for Emitter {
             if i != 0 {
                 self.newline();
             }
-            self.generic_map.push(map.clone());
+            self.push_generic_map(map.clone());
 
             match &*arg.struct_union {
                 StructUnion::Struct(ref x) => {
@@ -2613,7 +2804,7 @@ impl VerylWalker for Emitter {
             self.str(";");
             self.token(&arg.r_brace.r_brace_token.replace(""));
 
-            self.generic_map.pop();
+            self.pop_generic_map();
         }
     }
 
@@ -2675,7 +2866,31 @@ impl VerylWalker for Emitter {
 
     /// Semantic action for non-terminal 'InstDeclaration'
     fn inst_declaration(&mut self, arg: &InstDeclaration) {
-        self.single_line = arg.inst_declaration_opt1.is_none();
+        let allow_missing_port = attribute_table::contains(
+            &arg.inst.inst_token.token,
+            Attr::Allow(AllowItem::MissingPort),
+        );
+        let (defined_ports, generic_map) = if allow_missing_port {
+            (Vec::new(), Vec::new())
+        } else if let (Ok(symbol), _) = self.resolve_symbol_with_generics(&arg.scoped_identifier) {
+            match symbol.found.kind {
+                SymbolKind::Module(ref x) => (x.ports.clone(), Vec::new()),
+                SymbolKind::GenericInstance(ref x) => {
+                    let base = symbol_table::get(x.base).unwrap();
+                    match base.kind {
+                        SymbolKind::Module(ref base) => {
+                            (base.ports.clone(), symbol.found.generic_maps())
+                        }
+                        _ => (Vec::new(), Vec::new()),
+                    }
+                }
+                _ => (Vec::new(), Vec::new()),
+            }
+        } else {
+            unreachable!()
+        };
+
+        self.single_line = arg.inst_declaration_opt1.is_none() && defined_ports.is_empty();
         self.token(&arg.inst.inst_token.replace(""));
         self.scoped_identifier(&arg.scoped_identifier);
         self.space(1);
@@ -2698,14 +2913,26 @@ impl VerylWalker for Emitter {
             self.array(&x.array);
         }
         self.space(1);
+
         if let Some(ref x) = arg.inst_declaration_opt1 {
             self.token_will_push(&x.l_paren.l_paren_token.replace("("));
             self.newline_push();
             if let Some(ref x) = x.inst_declaration_opt2 {
                 self.inst_port_list(&x.inst_port_list);
+
+                let connected_ports: Vec<InstPortItem> = x.inst_port_list.as_ref().into();
+                self.emit_inst_unconnected_port(&defined_ports, &connected_ports, &generic_map);
+            } else {
+                self.emit_inst_unconnected_port(&defined_ports, &Vec::new(), &generic_map);
             }
             self.newline_pop();
             self.token(&x.r_paren.r_paren_token.replace(")"));
+        } else if !defined_ports.is_empty() {
+            self.str("(");
+            self.newline_push();
+            self.emit_inst_unconnected_port(&defined_ports, &Vec::new(), &generic_map);
+            self.newline_pop();
+            self.str(")");
         } else {
             self.str("()");
         }
@@ -2832,24 +3059,10 @@ impl VerylWalker for Emitter {
         if let Some(ref x) = arg.inst_port_item_opt {
             self.token(&x.colon.colon_token.replace(""));
             self.align_start(align_kind::EXPRESSION);
-            let mut stringifier = Stringifier::new();
-            stringifier.expression(&x.expression);
-            if stringifier.as_str() != "_" {
-                self.expression(&x.expression);
-            }
+            self.expression(&x.expression);
             self.align_finish(align_kind::EXPRESSION);
         } else {
-            let (prefix, suffix) = if let Ok(found) = symbol_table::resolve(arg.identifier.as_ref())
-            {
-                match &found.found.kind {
-                    SymbolKind::Port(x) => (x.prefix.clone(), x.suffix.clone()),
-                    SymbolKind::Variable(x) => (x.prefix.clone(), x.suffix.clone()),
-                    _ => (None, None),
-                }
-            } else {
-                unreachable!()
-            };
-            let token = identifier_with_prefix_suffix(&arg.identifier, &prefix, &suffix);
+            let token = emitting_identifier(arg.identifier.as_ref());
             self.align_start(align_kind::EXPRESSION);
             self.align_duplicated_token(align_kind::EXPRESSION, &token, 0);
             self.duplicated_token(&token, 0);
@@ -3084,7 +3297,7 @@ impl VerylWalker for Emitter {
             if i != 0 {
                 self.newline();
             }
-            self.generic_map.push(map.clone());
+            self.push_generic_map(map.clone());
 
             self.function(&arg.function);
             self.space(1);
@@ -3111,7 +3324,7 @@ impl VerylWalker for Emitter {
             self.str(";");
             self.emit_statement_block(&arg.statement_block, "", "endfunction");
 
-            self.generic_map.pop();
+            self.pop_generic_map();
         }
     }
 
@@ -3169,7 +3382,7 @@ impl VerylWalker for Emitter {
             if i != 0 {
                 self.newline();
             }
-            self.generic_map.push(map.clone());
+            self.push_generic_map(map.clone());
 
             self.module(&arg.module);
             self.space(1);
@@ -3211,7 +3424,7 @@ impl VerylWalker for Emitter {
             self.newline_list_post(arg.module_declaration_list.is_empty());
             self.token(&arg.r_brace.r_brace_token.replace("endmodule"));
 
-            self.generic_map.pop();
+            self.pop_generic_map();
         }
 
         self.default_clock = None;
@@ -3248,7 +3461,7 @@ impl VerylWalker for Emitter {
             if i != 0 {
                 self.newline();
             }
-            self.generic_map.push(map.clone());
+            self.push_generic_map(map.clone());
 
             self.interface(&arg.interface);
             self.space(1);
@@ -3286,7 +3499,7 @@ impl VerylWalker for Emitter {
             self.newline_list_post(arg.interface_declaration_list.is_empty());
             self.token(&arg.r_brace.r_brace_token.replace("endinterface"));
 
-            self.generic_map.pop();
+            self.pop_generic_map();
         }
     }
 
@@ -3449,7 +3662,7 @@ impl VerylWalker for Emitter {
             if i != 0 {
                 self.newline();
             }
-            self.generic_map.push(map.clone());
+            self.push_generic_map(map.clone());
 
             self.package(&arg.package);
             self.space(1);
@@ -3477,7 +3690,7 @@ impl VerylWalker for Emitter {
             self.newline_list_post(arg.package_declaration_list.is_empty());
             self.token(&arg.r_brace.r_brace_token.replace("endpackage"));
 
-            self.generic_map.pop();
+            self.pop_generic_map();
         }
     }
 
@@ -3630,11 +3843,16 @@ pub struct SymbolContext {
 
 impl From<&mut Emitter> for SymbolContext {
     fn from(value: &mut Emitter) -> Self {
+        let generic_map = if let Some(maps) = value.generic_map.last() {
+            maps.clone()
+        } else {
+            Vec::new()
+        };
         SymbolContext {
             project_name: value.project_name,
             build_opt: value.build_opt.clone(),
             in_import: value.in_import,
-            generic_map: value.generic_map.clone(),
+            generic_map,
         }
     }
 }
@@ -3698,10 +3916,18 @@ fn namespace_string(namespace: &Namespace, context: &SymbolContext) -> String {
 pub fn symbol_string(token: &VerylToken, symbol: &Symbol, context: &SymbolContext) -> String {
     let mut ret = String::new();
     let namespace = namespace_table::get(token.token.id).unwrap();
+
+    let token_text = symbol.token.to_string();
+    let token_text = if let Some(text) = token_text.strip_prefix("r#") {
+        text.to_string()
+    } else {
+        token_text
+    };
+
     match &symbol.kind {
         SymbolKind::Module(_) | SymbolKind::Interface(_) | SymbolKind::Package(_) => {
             ret.push_str(&namespace_string(&symbol.namespace, context));
-            ret.push_str(&symbol.token.to_string());
+            ret.push_str(&token_text);
         }
         SymbolKind::Parameter(_)
         | SymbolKind::Function(_)
@@ -3712,10 +3938,10 @@ pub fn symbol_string(token: &VerylToken, symbol: &Symbol, context: &SymbolContex
             let visible = namespace.included(&symbol.namespace)
                 || symbol.imported.iter().any(|x| *x == namespace);
             if visible & !context.in_import {
-                ret.push_str(&symbol.token.to_string());
+                ret.push_str(&token_text);
             } else {
                 ret.push_str(&namespace_string(&symbol.namespace, context));
-                ret.push_str(&symbol.token.to_string());
+                ret.push_str(&token_text);
             }
         }
         SymbolKind::EnumMember(x) => {
@@ -3728,15 +3954,15 @@ pub fn symbol_string(token: &VerylToken, symbol: &Symbol, context: &SymbolContex
             }
             ret.push_str(&x.prefix);
             ret.push('_');
-            ret.push_str(&symbol.token.to_string());
+            ret.push_str(&token_text);
         }
         SymbolKind::Modport(_) => {
             ret.push_str(&namespace_string(&symbol.namespace, context));
-            ret.push_str(&symbol.token.to_string());
+            ret.push_str(&token_text);
         }
         SymbolKind::SystemVerilog => {
             ret.push_str(&namespace_string(&symbol.namespace, context));
-            ret.push_str(&symbol.token.to_string());
+            ret.push_str(&token_text);
         }
         SymbolKind::GenericInstance(x) => {
             let base = symbol_table::get(x.base).unwrap();
@@ -3749,14 +3975,14 @@ pub fn symbol_string(token: &VerylToken, symbol: &Symbol, context: &SymbolContex
             if !visible | top_level {
                 ret.push_str(&namespace_string(&base.namespace, context));
             }
-            ret.push_str(&symbol.token.to_string());
+            ret.push_str(&token_text);
         }
         SymbolKind::GenericParameter(_) | SymbolKind::ProtoModule(_) => (),
         SymbolKind::Port(x) => {
             if let Some(ref x) = x.prefix {
                 ret.push_str(x);
             }
-            ret.push_str(&symbol.token.to_string());
+            ret.push_str(&token_text);
             if let Some(ref x) = x.suffix {
                 ret.push_str(x);
             }
@@ -3765,7 +3991,7 @@ pub fn symbol_string(token: &VerylToken, symbol: &Symbol, context: &SymbolContex
             if let Some(ref x) = x.prefix {
                 ret.push_str(x);
             }
-            ret.push_str(&symbol.token.to_string());
+            ret.push_str(&token_text);
             if let Some(ref x) = x.suffix {
                 ret.push_str(x);
             }
@@ -3778,7 +4004,7 @@ pub fn symbol_string(token: &VerylToken, symbol: &Symbol, context: &SymbolContex
         | SymbolKind::ModportFunctionMember(_)
         | SymbolKind::Genvar
         | SymbolKind::Namespace
-        | SymbolKind::SystemFunction => ret.push_str(&symbol.token.to_string()),
+        | SymbolKind::SystemFunction => ret.push_str(&token_text),
         SymbolKind::ClockDomain | SymbolKind::EnumMemberMangled | SymbolKind::Test(_) => {
             unreachable!()
         }
@@ -3797,4 +4023,17 @@ pub fn identifier_with_prefix_suffix(
     } else {
         identifier.identifier_token.strip_prefix("r#")
     }
+}
+
+pub fn emitting_identifier(arg: &Identifier) -> VerylToken {
+    let (prefix, suffix) = if let Ok(found) = symbol_table::resolve(arg) {
+        match &found.found.kind {
+            SymbolKind::Port(x) => (x.prefix.clone(), x.suffix.clone()),
+            SymbolKind::Variable(x) => (x.prefix.clone(), x.suffix.clone()),
+            _ => (None, None),
+        }
+    } else {
+        (None, None)
+    };
+    identifier_with_prefix_suffix(arg, &prefix, &suffix)
 }

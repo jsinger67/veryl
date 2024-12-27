@@ -62,13 +62,13 @@ impl<'a> CheckClockDomain<'a> {
     }
 }
 
-impl<'a> Handler for CheckClockDomain<'a> {
+impl Handler for CheckClockDomain<'_> {
     fn set_point(&mut self, p: HandlerPoint) {
         self.point = p;
     }
 }
 
-impl<'a> VerylGrammarTrait for CheckClockDomain<'a> {
+impl VerylGrammarTrait for CheckClockDomain<'_> {
     fn scoped_identifier(&mut self, arg: &ScopedIdentifier) -> Result<(), ParolError> {
         if let HandlerPoint::Before = self.point {
             if let Ok(symbol) = symbol_table::resolve(arg) {
@@ -130,7 +130,7 @@ impl<'a> VerylGrammarTrait for CheckClockDomain<'a> {
                 if let Some(ref x) = arg.always_ff_declaration_opt {
                     // clock domain is assigned to base identifier
                     let ident = x
-                        .alwayf_ff_event_list
+                        .always_ff_event_list
                         .always_ff_clock
                         .hierarchical_identifier
                         .identifier
@@ -215,7 +215,7 @@ impl<'a> VerylGrammarTrait for CheckClockDomain<'a> {
                             let mut connection_table =
                                 HashMap::<ClockDomain, (ClockDomain, TokenRange)>::new();
                             for x in &x.ports {
-                                if let Some(connected) = self.inst_clock_domains.get(&x.name) {
+                                if let Some(connected) = self.inst_clock_domains.get(&x.name()) {
                                     let port_domain = x.property().clock_domain;
                                     if let Some(assigned) = connection_table.get(&port_domain) {
                                         if !assigned.0.compatible(&connected.0)

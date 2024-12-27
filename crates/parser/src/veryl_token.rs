@@ -83,6 +83,15 @@ impl Token {
     }
 }
 
+pub fn is_anonymous_text(text: StrId) -> bool {
+    let anonymous_id = resource_table::insert_str("_");
+    text == anonymous_id
+}
+
+pub fn is_anonymous_token(token: &Token) -> bool {
+    is_anonymous_text(token.text)
+}
+
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let text = format!("{}", self.text);
@@ -392,7 +401,9 @@ impl From<&Factor> for TokenRange {
     fn from(value: &Factor) -> Self {
         match value {
             Factor::Number(x) => x.number.as_ref().into(),
-            Factor::ExpressionIdentifierFactorOpt(x) => x.expression_identifier.as_ref().into(),
+            Factor::IdentifierFactor(x) => {
+                x.identifier_factor.expression_identifier.as_ref().into()
+            }
             Factor::LParenExpressionRParen(x) => x.into(),
             Factor::LBraceConcatenationListRBrace(x) => x.into(),
             Factor::QuoteLBraceArrayLiteralListRBrace(x) => x.into(),

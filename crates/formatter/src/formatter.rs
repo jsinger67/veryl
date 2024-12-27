@@ -110,6 +110,17 @@ impl Formatter {
         self.str(&" ".repeat(indent_width));
     }
 
+    fn case_item_indent_push(&mut self, x: usize) {
+        self.case_item_indent.push(x);
+    }
+
+    fn case_item_indent_pop(&mut self) {
+        // cancel indent and re-indent after pop
+        self.unindent();
+        self.case_item_indent.pop();
+        self.indent();
+    }
+
     fn newline_push(&mut self) {
         if self.mode == Mode::Align {
             return;
@@ -991,9 +1002,9 @@ impl VerylWalker for Formatter {
         match &*arg.case_item_group0 {
             CaseItemGroup0::Statement(x) => self.statement(&x.statement),
             CaseItemGroup0::StatementBlock(x) => {
-                self.case_item_indent.push(self.column() - start);
+                self.case_item_indent_push(self.column() - start);
                 self.statement_block(&x.statement_block);
-                self.case_item_indent.pop();
+                self.case_item_indent_pop();
             }
         }
     }
@@ -1035,9 +1046,9 @@ impl VerylWalker for Formatter {
         match &*arg.switch_item_group0 {
             SwitchItemGroup0::Statement(x) => self.statement(&x.statement),
             SwitchItemGroup0::StatementBlock(x) => {
-                self.case_item_indent.push(self.column() - start);
+                self.case_item_indent_push(self.column() - start);
                 self.statement_block(&x.statement_block);
-                self.case_item_indent.pop();
+                self.case_item_indent_pop();
             }
         }
     }
@@ -1160,16 +1171,16 @@ impl VerylWalker for Formatter {
         self.always_ff(&arg.always_ff);
         self.space(1);
         if let Some(ref x) = arg.always_ff_declaration_opt {
-            self.alwayf_ff_event_list(&x.alwayf_ff_event_list);
+            self.always_ff_event_list(&x.always_ff_event_list);
         }
         self.statement_block(&arg.statement_block);
     }
 
-    /// Semantic action for non-terminal 'AlwayfFfEventList'
-    fn alwayf_ff_event_list(&mut self, arg: &AlwayfFfEventList) {
+    /// Semantic action for non-terminal 'AlwaysFfEventList'
+    fn always_ff_event_list(&mut self, arg: &AlwaysFfEventList) {
         self.l_paren(&arg.l_paren);
         self.always_ff_clock(&arg.always_ff_clock);
-        if let Some(ref x) = arg.alwayf_ff_event_list_opt {
+        if let Some(ref x) = arg.always_ff_event_list_opt {
             self.comma(&x.comma);
             self.space(1);
             self.always_ff_reset(&x.always_ff_reset);
@@ -1774,6 +1785,17 @@ impl VerylWalker for Formatter {
                     self.align_finish(align_kind::CLOCK_DOMAIN);
                 }
                 self.array_type(&x.array_type);
+                self.align_start(align_kind::EXPRESSION);
+                if let Some(ref x) = x.port_type_concrete_opt0 {
+                    self.space(1);
+                    self.equ(&x.equ);
+                    self.space(1);
+                    self.expression(&x.port_default_value.expression);
+                } else {
+                    let loc = self.align_last_location(align_kind::ARRAY);
+                    self.align_dummy_location(align_kind::EXPRESSION, loc);
+                }
+                self.align_finish(align_kind::EXPRESSION);
             }
             PortDeclarationItemGroup::PortTypeAbstract(x) => {
                 let x = x.port_type_abstract.as_ref();
@@ -1828,6 +1850,7 @@ impl VerylWalker for Formatter {
             self.space(1);
         }
         if let Some(ref x) = arg.function_declaration_opt1 {
+            self.align_reset();
             self.minus_g_t(&x.minus_g_t);
             self.space(1);
             self.scalar_type(&x.scalar_type);

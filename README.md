@@ -2,7 +2,7 @@
 
 [![Actions Status](https://github.com/veryl-lang/veryl/workflows/Regression/badge.svg)](https://github.com/veryl-lang/veryl/actions)
 [![Crates.io](https://img.shields.io/crates/v/veryl.svg)](https://crates.io/crates/veryl)
-[![Changelog](https://img.shields.io/badge/changelog-v0.13.3-green.svg)](https://github.com/veryl-lang/veryl/blob/master/CHANGELOG.md)
+[![CodSpeed Badge](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/veryl-lang/veryl)
 
 Veryl is a modern hardware description language.
 
@@ -28,6 +28,7 @@ If you have any idea, please open [Issue](https://github.com/veryl-lang/veryl/is
 * [FAQ](#faq)
 * [Installation & Usage](#installation--usage)
 * [Publications](#plublications)
+* [Related Projects](#related-projects)
 * [License](#license)
 * [Contribution](#contribution)
 
@@ -165,6 +166,12 @@ See [Getting Started](https://doc.veryl-lang.org/book/03_getting_started.html).
   [[Paper]](https://veryl-lang.org/docs/veryl_dvcon-jpn-2024.pdf)
   [[Slides]](https://veryl-lang.org/docs/veryl_dvcon-jpn-2024-slide.pdf)
   [[arXiv]](http://arxiv.org/abs/2411.12983)
+
+## Related Projects
+
+* [RgGen](https://github.com/rggen/rggen)
+    * RgGen is an open source CSR automation tool.
+      It can generate CSR modules written in Veryl from readable register map specifications.
 
 ## License
 
