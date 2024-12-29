@@ -24,7 +24,7 @@ pub const TERMINALS: &[(&str, Option<(bool, &str)>); 119] = &[
     /*   2 */ (UNMATCHABLE_TOKEN, None),
     /*   3 */ (UNMATCHABLE_TOKEN, None),
     /*   4 */ (UNMATCHABLE_TOKEN, None),
-    /*   5 */ (r"(//.*(\r\n|\r|\n)?|/\*([^*]|\*[^/])*\*/\s*)+", None),
+    /*   5 */ (r"((//.*(\r\n|\r|\n)?|/\*([^*]|\*[^/])*\*/)\s*)+", None),
     /*   6 */
     (
         r"\u{0022}(\\[\u{0022}\\/bfnrt]|u[0-9a-fA-F]{4}|[^\u{0022}\\\u0000-\u001F])*\u{0022}",
@@ -21122,7 +21122,7 @@ pub const LOOKAHEAD_AUTOMATA: &[LookaheadDFA; 676] = &[
 ];
 
 pub const PRODUCTIONS: &[Production; 968] = &[
-    // 0 - CommentsTerm: "(//.*(\r\n|\r|\n)?|/\*([^*]|\*[^/])*\*/\s*)+";
+    // 0 - CommentsTerm: "((//.*(\r\n|\r|\n)?|/\*([^*]|\*[^/])*\*/)\s*)+";
     Production {
         lhs: 103,
         production: &[ParseType::T(5)],
