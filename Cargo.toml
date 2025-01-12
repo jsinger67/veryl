@@ -63,4 +63,5 @@ opt-level = 3
 lto = true
 
 [profile.bench]
+lto = true
 debug = true
