@@ -3252,8 +3252,7 @@ dependencies = [
 [[package]]
 name = "parol"
 version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f3c6b7266fdbb935273e4340ee9d62d36caace22b1951c52b6dfdd4d8f4c7a3"
+source = "git+https://github.com/jsinger67/parol?branch=main#1f30e90b269472284856c7db5f68275c3867705d"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3290,14 +3289,12 @@ dependencies = [
 [[package]]
 name = "parol-macros"
 version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54ec451836679aaa55158b454b441e21446a111ea34aa1917eba29245bafe4b8"
+source = "git+https://github.com/jsinger67/parol?branch=main#1f30e90b269472284856c7db5f68275c3867705d"
 
 [[package]]
 name = "parol_runtime"
 version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "531143dc577eafe6f34be536531d41a7e8441cc0d234e2b6b5f62e3a75a8902b"
+source = "git+https://github.com/jsinger67/parol?branch=main#1f30e90b269472284856c7db5f68275c3867705d"
 dependencies = [
  "anyhow",
  "codespan-reporting",
@@ -4022,8 +4019,7 @@ dependencies = [
 [[package]]
 name = "scnr"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc8c5cbd91034b60d2b2234cc48130179099a99c51ab5f36672e0960d5eaaf7c"
+source = "git+https://github.com/jsinger67/scnr?branch=main#c5f0782f79c8fbe8a46395e1c9e08bfbdf612ab9"
 dependencies = [
  "dot-writer",
  "log",
