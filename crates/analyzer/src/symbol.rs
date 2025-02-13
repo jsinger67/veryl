@@ -807,8 +807,8 @@ impl TryFrom<&syntax_tree::Expression> for Type {
         };
 
         match value {
-            syntax_tree::Factor::FactorType(x) => {
-                let factor_type: Type = x.factor_type.as_ref().into();
+            syntax_tree::Factor::FactorTypeFactor(x) => {
+                let factor_type: Type = x.factor_type_factor.factor_type.as_ref().into();
                 Ok(factor_type)
             }
             syntax_tree::Factor::IdentifierFactor(x) => {

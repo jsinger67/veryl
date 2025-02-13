@@ -1100,8 +1100,8 @@ pub trait VerylWalker {
             Factor::TypeExpression(x) => {
                 self.type_expression(&x.type_expression);
             }
-            Factor::FactorType(x) => {
-                self.factor_type(&x.factor_type);
+            Factor::FactorTypeFactor(x) => {
+                self.factor_type(&x.factor_type_factor.factor_type);
             }
         }
         after!(self, factor, arg);

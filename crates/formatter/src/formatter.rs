@@ -210,12 +210,6 @@ impl Formatter {
     fn process_token(&mut self, x: &VerylToken, will_push: bool) {
         match self.mode {
             Mode::Emit => {
-                dbg!(x.token.line);
-                dbg!(x.token.text.to_string());
-                for x in &x.comments {
-                    dbg!(x.line);
-                    dbg!(x.text.to_string());
-                }
                 self.push_token(&x.token);
 
                 let loc: Location = x.token.into();
