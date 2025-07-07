@@ -1401,8 +1401,7 @@ impl VerylWalker for Formatter {
     /// Semantic action for non-terminal 'Attribute'
     fn attribute(&mut self, arg: &Attribute) {
         self.in_attribute = true;
-        self.hash(&arg.hash);
-        self.l_bracket(&arg.l_bracket);
+        self.hash_l_bracket(&arg.hash_l_bracket);
         self.identifier(&arg.identifier);
         if let Some(ref x) = arg.attribute_opt {
             self.l_paren(&x.l_paren);

@@ -244,6 +244,13 @@ pub trait VerylWalker {
         after!(self, hash, arg);
     }
 
+    /// Semantic action for non-terminal 'HashLBracket'
+    fn hash_l_bracket(&mut self, arg: &HashLBracket) {
+        before!(self, hash_l_bracket, arg);
+        self.veryl_token(&arg.hash_l_bracket_token);
+        after!(self, hash_l_bracket, arg);
+    }
+
     /// Semantic action for non-terminal 'Question'
     fn question(&mut self, arg: &Question) {
         before!(self, question, arg);
@@ -1919,8 +1926,7 @@ pub trait VerylWalker {
     /// Semantic action for non-terminal 'Attribute'
     fn attribute(&mut self, arg: &Attribute) {
         before!(self, attribute, arg);
-        self.hash(&arg.hash);
-        self.l_bracket(&arg.l_bracket);
+        self.hash_l_bracket(&arg.hash_l_bracket);
         self.identifier(&arg.identifier);
         if let Some(ref x) = arg.attribute_opt {
             self.l_paren(&x.l_paren);

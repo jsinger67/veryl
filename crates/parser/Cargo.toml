@@ -17,9 +17,10 @@ exclude               = ["build.rs"]
 anyhow        = {workspace = true}
 bimap         = "0.6.3"
 once_cell     = {workspace = true}
-parol_runtime = {version = "3.0", features = ["regex_automata"], default-features = false}
+parol_runtime = {git = 'https://github.com/jsinger67/parol.git', package = "parol_runtime", tag = "taichi-ishitani", version = "3.0"}
 paste         = "1.0"
 regex         = {workspace = true}
+scnr2         = {git = 'https://github.com/jsinger67/scnr2.git', tag = "taichi-ishitani", version = "0.2.0"}
 thiserror     = {workspace = true}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -29,7 +30,7 @@ miette        = {workspace = true, features = ["fancy-no-syscall"]}
 miette        = {workspace = true, features = ["fancy"]}
 
 [build-dependencies]
-parol         = {version = "3.0", optional = true}
+parol = {git = 'https://github.com/jsinger67/parol.git', package = "parol", tag = "taichi-ishitani", version = "3.0", optional = true}
 
 [features]
 default = ["build"]

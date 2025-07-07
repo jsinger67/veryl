@@ -354,6 +354,7 @@ token_with_comments!(DotDotEqu);
 token_with_comments!(Dot);
 token_with_comments!(Equ);
 token_with_comments!(Hash);
+token_with_comments!(HashLBracket);
 token_with_comments!(Question);
 token_with_comments!(QuoteLBrace);
 token_with_comments!(LAngle);
@@ -481,22 +482,19 @@ impl TryFrom<&EmbedContentToken> for VerylToken {
     type Error = anyhow::Error;
 
     fn try_from(x: &EmbedContentToken) -> Result<Self, anyhow::Error> {
-        let head_token = &x.l_brace_term.l_brace_term;
+        let head_token = &x.triple_l_brace_term.triple_l_brace_term;
         let line = head_token.line;
         let column = head_token.column;
         let length = head_token.length;
         let pos = head_token.pos;
         let source = head_token.source;
 
-        let mut text = x.l_brace_term.l_brace_term.to_string();
-        text.push_str(&x.l_brace_term0.l_brace_term.to_string());
-        text.push_str(&x.l_brace_term1.l_brace_term.to_string());
+        let mut text = x.triple_l_brace_term.triple_l_brace_term.to_string();
+        text.push_str(&x.triple_l_brace_term.triple_l_brace_term.to_string());
         for x in &x.embed_content_token_list {
             text.push_str(&embed_item_to_string(&x.embed_item));
         }
-        text.push_str(&x.r_brace_term.r_brace_term.to_string());
-        text.push_str(&x.r_brace_term0.r_brace_term.to_string());
-        text.push_str(&x.r_brace_term1.r_brace_term.to_string());
+        text.push_str(&x.triple_r_brace_term.triple_r_brace_term.to_string());
 
         let mut comments = Vec::new();
         if let Some(ref x) = x.comments.comments_opt {

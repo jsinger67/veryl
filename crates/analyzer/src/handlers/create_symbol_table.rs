@@ -597,7 +597,8 @@ impl VerylGrammarTrait for CreateSymbolTable {
 
     fn attribute(&mut self, arg: &Attribute) -> Result<(), ParolError> {
         if let HandlerPoint::Before = self.point {
-            self.attribute_lines.insert(arg.hash.hash_token.token.line);
+            self.attribute_lines
+                .insert(arg.hash_l_bracket.hash_l_bracket_token.token.line);
         }
         Ok(())
     }

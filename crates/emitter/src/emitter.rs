@@ -3062,7 +3062,7 @@ impl VerylWalker for Emitter {
                             self.project_name.unwrap(),
                             test_name
                         );
-                        self.token(&arg.hash.hash_token.replace(&text));
+                        self.token(&arg.hash_l_bracket.hash_l_bracket_token.replace(&text));
                         self.newline();
                         let mut wavedump = format!(
                             r##"    `ifdef __veryl_wavedump_{}_{}__

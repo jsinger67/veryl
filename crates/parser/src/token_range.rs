@@ -294,6 +294,7 @@ impl_token_range_singular!(DotDotEqu);
 impl_token_range_singular!(Dot);
 impl_token_range_singular!(Equ);
 impl_token_range_singular!(Hash);
+impl_token_range_singular!(HashLBracket);
 impl_token_range_singular!(Question);
 impl_token_range_singular!(QuoteLBrace);
 impl_token_range_singular!(LAngle);
@@ -931,7 +932,7 @@ impl_token_ext!(SwitchCondition);
 // Attribute
 // ----------------------------------------------------------------------------
 
-impl_token_range!(Attribute, hash, r_bracket);
+impl_token_range!(Attribute, hash_l_bracket, r_bracket);
 impl_token_range_list!(AttributeList, AttributeItem);
 impl_token_range_enum!(AttributeItem, identifier, string_literal);
 
